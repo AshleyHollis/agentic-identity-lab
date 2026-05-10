@@ -361,15 +361,20 @@ jobs:
             ["agent-identity-lab-dev-mcp"]="module.container_app_mcp_protected_api.azurerm_container_app.this"
           )
           for app_name in "${!app_to_address[@]}"; do
-            app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv 2>/dev/null || true)"
-            if [[ -z "${app_id}" ]]; then
-              continue
-            fi
-            app_id="${app_id/\/providers\/Microsoft.App\/containerapps\//\/providers\/Microsoft.App\/containerApps\/}"
             address="${app_to_address[$app_name]}"
             if terraform -chdir="${workdir}" state show "${address}" >/dev/null 2>&1; then
               continue
             fi
+            app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv 2>/dev/null || true)"
+            if [[ -z "${app_id}" ]]; then
+              continue
+            fi
+            provisioning_state="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.provisioningState -o tsv)"
+            if [[ "${provisioning_state}" == "Failed" ]]; then
+              az containerapp delete --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --yes --output none
+              continue
+            fi
+            app_id="${app_id/\/providers\/Microsoft.App\/containerapps\//\/providers\/Microsoft.App\/containerApps\/}"
             terraform -chdir="${workdir}" import -input=false "${address}" "${app_id}"
           done
           terraform -chdir="${workdir}" apply -auto-approve -input=false -no-color
