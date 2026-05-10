@@ -304,6 +304,9 @@ jobs:
     name: Smoke gate (protected/manual only)
     needs: deploy-summary
     if: ${{ inputs.live_azure_tests }}
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/m8-smoke-trace.yml
     with:
       environment_slug: ${{ inputs.environment_slug }}
