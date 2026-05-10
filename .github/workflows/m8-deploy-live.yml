@@ -476,20 +476,14 @@ jobs:
               --role AcrPull \
               --scope "${acr_id}" \
               --output none 2>/dev/null || true
-            az containerapp registry set \
-              --name "${app_name}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --server "${login_server}" \
-              --identity "${identity_id}" \
-              --output none
             app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
             patch_file="$(mktemp)"
-            python - "$app_name" "${AZURE_RESOURCE_GROUP}" "${app_to_image[$app_name]}" "$patch_file" <<'PY'
+            python - "$app_name" "${AZURE_RESOURCE_GROUP}" "${app_to_image[$app_name]}" "${login_server}" "${identity_id}" "$patch_file" <<'PY'
           import json
           import subprocess
           import sys
 
-          app_name, resource_group, image, patch_file = sys.argv[1:5]
+          app_name, resource_group, image, login_server, identity_id, patch_file = sys.argv[1:7]
           app = json.loads(
               subprocess.check_output(
                   [
@@ -509,6 +503,7 @@ jobs:
           configuration = app["properties"]["configuration"]
           template = app["properties"]["template"]
           configuration["ingress"]["targetPort"] = 8000
+          configuration["registries"] = [{"server": login_server, "identity": identity_id}]
           template["containers"][0]["image"] = image
           with open(patch_file, "w", encoding="utf-8") as handle:
               json.dump({"properties": {"configuration": configuration, "template": template}}, handle)
