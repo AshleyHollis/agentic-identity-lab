@@ -1,0 +1,87 @@
+name: agentic-identity-lab
+services:
+  bff:
+    build:
+      context: ..\apps\bff\python-fastapi
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVICE_NAME=bff
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+      - AUTH_MODE=mock
+      - AUTH_FIXTURE=delegated-user
+      - ALLOWED_AUDIENCES=api://00000000-0000-0000-0000-000000000101
+      - REQUIRED_SCOPES=mcp.access
+      - TRUSTED_TENANTS=00000000-0000-0000-0000-000000000000
+      - CORRELATION_HEADER=x-correlation-id
+      - ENABLE_DEBUG_CLAIMS=false
+      # AUTH_ISSUER and AUTH_JWKS_URL are not set here — only needed for AUTH_MODE=strict (M6 overlay)
+    healthcheck:
+      test: ["CMD", "python", "-c",
+        "import urllib.request, sys; urllib.request.urlopen('http://localhost:8080/healthz') or sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      agent-gateway:
+        condition: service_healthy
+      mcp-protected-api:
+        condition: service_healthy
+  agent-gateway:
+    build:
+      context: ..\apps\agent-gateway\python-fastapi-agent-framework
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVICE_NAME=agent-gateway
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+      - AUTH_MODE=mock
+      - AUTH_FIXTURE=delegated-user
+      - ALLOWED_AUDIENCES=api://00000000-0000-0000-0000-000000000102
+      - REQUIRED_SCOPES=mcp.access,mcp.write
+      - OBO_DOWNSTREAM_AUDIENCE=api://00000000-0000-0000-0000-000000000103
+      - OBO_REQUIRED_SCOPES=mcp.access,mcp.write
+      - TRUSTED_TENANTS=00000000-0000-0000-0000-000000000000
+      - CORRELATION_HEADER=x-correlation-id
+      - ENABLE_DEBUG_CLAIMS=false
+      # AUTH_ISSUER and AUTH_JWKS_URL are not set here — only needed for AUTH_MODE=strict (M6 overlay)
+    healthcheck:
+      test: ["CMD", "python", "-c",
+        "import urllib.request, sys; urllib.request.urlopen('http://localhost:8080/healthz') or sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+  mcp-protected-api:
+    build:
+      context: ..\apps\mcp-protected-api\python-fastapi
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      - SERVICE_NAME=mcp-protected-api
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+      - AUTH_MODE=mock
+      - AUTH_FIXTURE=delegated-user
+      - ALLOWED_AUDIENCES=api://00000000-0000-0000-0000-000000000103
+      - REQUIRED_SCOPES=mcp.access,mcp.write
+      - TRUSTED_TENANTS=00000000-0000-0000-0000-000000000000
+      - CORRELATION_HEADER=x-correlation-id
+      - ENABLE_DEBUG_CLAIMS=false
+      # AUTH_ISSUER and AUTH_JWKS_URL are not set here — only needed for AUTH_MODE=strict (M6 overlay)
+    healthcheck:
+      test: ["CMD", "python", "-c",
+        "import urllib.request, sys; urllib.request.urlopen('http://localhost:8080/healthz') or sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+networks:
+  default:
+    name: agentic-identity-lab
