@@ -6,7 +6,7 @@
   "status": "in-progress",
   "created": "2026-05-10",
   "promoted": "2026-05-14",
-  "updated": "2026-05-29",
+  "updated": "2026-05-30",
   "requested_by": "Ashley Hollis",
   "owners": {
     "primary": ["Morpheus", "Tank", "Trinity", "Neo"],
@@ -75,11 +75,11 @@
     "T05": "done",
     "T06": "done",
     "T07": "done",
-    "T08": "ready",
+    "T08": "done",
     "T09": "done",
     "T10": "done",
-    "T11": "ready",
-    "T12": "blocked",
+    "T11": "done",
+    "T12": "ready",
     "T13": "blocked",
     "T14": "blocked",
     "T15": "blocked",
@@ -87,7 +87,7 @@
     "T17": "done",
     "T18": "done",
     "T19": "done",
-    "T20": "ready"
+    "T20": "done"
   },
   "validation_commands": [
     "python -m pytest",
@@ -102,15 +102,18 @@
     "No implementation files (runtime/infra code) were modified during spec promotion.",
     "Existing identity-notes.md and infra-notes.md are preserved; their research content is integrated into research.md and design.md.",
     "Spec-first gate is now satisfied. Coordinator should schedule T01 (Morpheus review) to unblock the review stream.",
+    "T20 COMPLETE 2026-05-30 — Trinity. Tracing security review: all 8 security checks passed — no PII span attributes, no raw bearer tokens in spans, OTEL SDK auto-disabled in offline test runs (no OTLP endpoint set), Jaeger/collector config routes only to internal Docker network (no external egress), no port conflicts with base Compose ports, fixture_name suppressed in strict mode (all 3 services), no live Azure/App Insights secrets committed, overlay is opt-in. Validation: python -m pytest → 200 passed; docker compose config --quiet → exit 0. T15 dependency on T20 satisfied; T15 remains blocked on T13+T14.",
     "T19 COMPLETE 2026-05-28 — Tank. Created docker/docker-compose.tracing.yml (otel-collector otel/opentelemetry-collector-contrib:0.104.0 + jaeger jaegertracing/all-in-one:1.58; images pinned; ILLUSTRATIVE comment present; OTEL env vars added to bff/agent-gateway/mcp-protected-api; network merge via compose -f). Created docker/otel-collector-config.yaml (OTLP gRPC+HTTP → otlp/jaeger exporter to jaeger:4317). docker/README.md updated with opt-in tracing usage section. Validation: docker compose config --quiet exit 0. T20 now blocked only on T18.",
     "Amendment 001 applied 2026-05-15: terminology clarification, E2E tracing requirements (FR-11, FR-12, NFR-07), tasks T17–T20.",
     "Amendment 001 approved by Ashley Hollis after Morpheus architecture review and Spec Feature terminology reconciliation. Implementation remains blocked pending T03.",
     "Amendment 001 terminology correction applied 2026-05-15: 'local app gateway' superseded by 'Agentic Layer' and 'standalone Agent Gateway' superseded by 'AKS Agent Gateway' per ADR 0006 (accepted by Morpheus). Artifact paths apps/agent-gateway/ and Docker Compose service name agent-gateway preserved as legacy references.",
     "T18 COMPLETE 2026-05-29 — Neo. OTEL instrumentation for mock flow: shared telemetry.py in identity_lab_auth (setup_telemetry/get_tracer/instrument_fastapi/record_auth_attributes/record_obo_attributes/safe_span_attribute_key); all three services instrumented (BFF, Agentic Layer, MCP Protected API); identity_lab.* span attributes; strict-mode fixture_name suppression; PII guard; OTEL_SDK_DISABLED env var in all env.example files; 34 new tests. 174 total tests pass. T20 (Trinity tracing review) now ready.",
+    "T11 COMPLETE 2026-05-29 — Neo. Implemented MockAgentSidecarClient in agent_obo.py: validate() checks aud/tid/exp/scp vs blueprint_audience+trusted_tenants, returns sanitize_claims(fixture_claims); authorization_header() returns 'Bearer OFFLINE_MOCK_TOKEN' (zero HTTP); downstream_api() validates fixture aud as proxy then returns sanitize_claims(obo_fixture_claims). Exported from __init__.py. New test file tests/security/test_mock_agent_sidecar_client.py: 21 tests (happy-path, wrong-aud, untrusted-tenant, stale, app-only, downstream-wrong-aud, missing-actor, no-PII, path-separation, package-export, fixture-immutability). python -m pytest -> 200 passed. T12 now unblocked.",
     "T04 COMPLETE 2026-05-10 — Tank created AKS Terraform module skeletons: modules/aks, modules/workload-identity, modules/k8s-bootstrap, environments/aks. All placeholder-only (no real IDs/secrets). terraform fmt -check -recursive, init -backend=false, and validate all pass. T05 now unblocked.",
     "T05 COMPLETE 2026-05-27 — Tank created docs/deployment/k8s/ with README.md, namespace.yaml, service-account.yaml, agent-gateway-deployment.yaml, network-policy.yaml. All files labelled ILLUSTRATIVE REFERENCE ONLY. Agentic Layer terminology used throughout; all GUIDs are all-zero placeholders; no real IDs/secrets. YAML syntax validated. T14 dependency on T05 satisfied; T14 remains blocked on T12+T13+T18+T19.",
     "T06 COMPLETE 2026-05-15 — Trinity. Added xms_act_fct to config/claims/safe-claims-allowlist.json and DEFAULT_SAFE_CLAIM_KEYS in claims.py. Extended _sanitize_value() to handle dict inputs safely (recursive scalar sanitization, 512-char JSON bound, nested-dict safe). New test file tests/security/test_t06_actor_claims.py covers: xms_act_fct inclusion, oid/sub suppression, dict handling without raise, sanitize_claims integration. T07 now unblocked.",
     "T07 COMPLETE 2026-05-28 — Trinity. Created seven Agent ID / Agent OBO fixture JSON files under tests/fixtures/sample-claims/: agent-blueprint-user-token, agent-obo-mcp-token, agent-wrong-audience, agent-missing-actor, agent-app-only-blueprint, agent-untrusted-tenant, agent-replay-stale. All all-zero placeholder GUIDs. No PII claims (no oid/sub/email/upn/name). xms_act_fct in obo-mcp-token is JSON object {appid: 00000000-0000-0000-0000-000000000201}. exp=1893456000 for valid fixtures; exp=1600000000 for stale fixture. Validation: python -m pytest tests/security/test_t06_actor_claims.py tests/security/test_jwks_strict.py -> 49 passed. T08 and T11 now unblocked.",
+    "T08 COMPLETE 2026-05-29 — Trinity. Added require_actor_appid() guard to guards.py (checks appid non-empty string at MCP boundary). New test file tests/security/test_t08_negative_fixture_tests.py: 5 offline negative tests — wrong_audience (require_audience returns False), missing_actor (require_actor_appid returns False; fixture is delegated-shaped but lacks appid), app_only_blueprint (require_delegated_token returns False; no scp), untrusted_tenant (validate_claims includes 'untrusted_tenant'), replay_stale (validate_claims includes 'token_expired' with clock_skew=0). Zero network calls. All assertions target rejection reason, not just boolean. python -m pytest -> 200 passed. T13 (Neo) still blocked on T12 only.",
     "T09 COMPLETE 2026-05-15 — Trinity. Created apps/shared/python/identity_lab_auth/jwks.py implementing: ALLOWED_ALGORITHMS, REJECTED_ALGORITHMS, _validate_algorithm() with lowercase normalization (closes mixed-case bypass), JwksCache dataclass with TTL/kid-miss-retry/injectable http client, validate_strict() with jku/x5u suppression. New test file tests/security/test_jwks_strict.py covers: alg:none (all mixed-case variants), HS256/HS384/HS512, missing kid, unknown kid after retry, jku/x5u SSRF suppression, fixture-header suppression in strict mode, RS256+kid structure accepted. All 140 tests pass."
   ]
 }
