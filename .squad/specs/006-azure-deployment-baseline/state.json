@@ -2,10 +2,10 @@
   "spec_id": "006",
   "slug": "azure-deployment-baseline",
   "milestone": "M6",
-  "phase": "post-implementation-review",
-  "status": "post-implementation-security-review-complete",
+  "phase": "closed",
+  "status": "complete",
   "created": "2026-06-01",
-  "updated": "2026-06-01-trinity-post-impl-security-review",
+  "updated": "2026-06-01-tank-m6-final-closeout",
   "requested_by": "Ashley Hollis",
   "owners": {
     "primary": [
@@ -124,5 +124,21 @@
       ],
       "note": "All seven security checks passed. Two tiny doc-only corrections applied (no implementation change). M6 READY FOR MORPHEUS FINAL CLOSURE."
     }
+  },
+  "final_closeout": {
+    "performed_by": "Tank",
+    "date": "2026-06-01",
+    "verdict": "CLOSED",
+    "validation_results": {
+      "pytest_235": "PASS — 235/235 tests passed",
+      "terraform_fmt_check": "PASS — exit code 0, no formatting issues",
+      "terraform_init_backend_false": "PASS — initialized successfully (azurerm + azuread providers)",
+      "terraform_validate": "PASS — The configuration is valid.",
+      "docker_compose_strict_aca": "PASS — exit code 0",
+      "docker_compose_tracing": "PASS — exit code 0",
+      "no_secret_scan_m6": "PASS — zero real GUIDs in M6 source files; all-zero-prefix placeholders only"
+    },
+    "milestone_status": "complete",
+    "next_milestone": "M7 — Variant client implementations (spec not yet created)"
   }
 }

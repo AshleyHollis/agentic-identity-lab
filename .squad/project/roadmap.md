@@ -24,7 +24,7 @@ Principles
 
 > Last updated: 2026-06-01 · Maintained by Tank
 
-**▶ Current position: M6 Task 0 — naming adopted (Agent Execution Service). M5 complete. Next: Milestone 6 — Azure deployment baseline.**
+**▶ Current position: M7 — Variant client implementations (spec creation phase). M6 complete and closed.**
 
 | # | Milestone | Spec | Status | Validation |
 |---|-----------|------|--------|------------|
@@ -33,8 +33,8 @@ Principles
 | M3 | APIM policy alignment | [Spec 004](.squad\specs\004-apim-policy-alignment\README.md) | ✅ Complete | pytest 56 passed; `terraform fmt` + `validate` passed |
 | M4 | Local runtime ergonomics | [Spec 005](.squad\specs\005-local-runtime-ergonomics\README.md) | ✅ Complete | Compose configs passed; `python -m pytest` 65 passed |
 | M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | ✅ Complete | `python -m pytest` 229 passed; Terraform fmt/init/validate passed; Compose tracing config passed |
-| M6 | Azure deployment baseline | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | 📋 Spec-ready (gate pending) | `terraform fmt` + `validate` + `python -m pytest` |
-| M7 | Variant client implementations | *(spec not yet created)* | 📋 Roadmap | variant tests + `python -m pytest` |
+| M6 | Azure deployment baseline | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | ✅ Complete | pytest 235 passed; `terraform fmt/init/validate` passed; Compose strict-aca + tracing configs passed; no-secret scan passed |
+| M7 | Variant client implementations | *(spec not yet created)* | 📋 Roadmap — spec creation next | variant tests + `python -m pytest` |
 
 > **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.
 
@@ -196,7 +196,7 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 **Owner agents:** Tank (Lead/Infra), Neo (Backend/Rename)  
 **Reviewers:** Morpheus, Trinity  
 **Impact:** High  
-**Status:** 📋 Spec-ready — [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) complete; awaiting T11 (Morpheus) + T12 (Trinity) review gate and coordinator approval to begin T00–T10.
+**Status:** ✅ Complete — [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) closed. All T00–T13 tasks complete; Morpheus + Trinity post-implementation reviews accepted; final closeout validation passed 2026-06-01.
 
 ### ✅ Done by end of M6 — what works
 
