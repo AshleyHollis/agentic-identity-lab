@@ -19,8 +19,8 @@
   },
   "impact": "High",
   "spec_gate_satisfied": true,
-  "implementation_blocked": true,
-  "implementation_blocked_reason": "T12 (Trinity security review) must complete before any implementation begins. T11 (Morpheus architecture review) is complete and accepted.",
+  "implementation_blocked": false,
+  "implementation_blocked_reason": "T11 (Morpheus architecture review) ACCEPTED 2026-06-01. T12 (Trinity security review) ACCEPTED 2026-06-01. Binding conditions BC-01 through BC-09 apply before T02-T04 token acquisition code ships. See .progress.md T12 section.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -59,23 +59,25 @@
     "ADR-M7-01": {
       "question": "MSAL token cache storage location",
       "owner": "Mouse",
-      "status": "confirmed",
-      "confirmed_by": "Morpheus T11",
-      "decision": "Option A -- sessionStorage (not localStorage). Survives tab refresh; not cross-tab readable. localStorage is prohibited.",
-      "pending_confirmation": ["T12"]
+      "status": "accepted",
+      "confirmed_by": "Morpheus T11 + Trinity T12",
+      "decision": "Option A -- sessionStorage (not localStorage). Survives tab refresh; not cross-tab readable. localStorage prohibited. storeAuthStateInCookie: false required. Application code must not write raw token strings to any storage API.",
+      "pending_confirmation": [],
+      "closed": "2026-06-01",
+      "resolves": "OQ3"
     },
     "ADR-M7-02": {
       "question": "Classic loader token provider interface: pluggable vs hard-coded",
       "owner": "Mouse",
-      "status": "confirmed",
+      "status": "accepted",
       "confirmed_by": "Morpheus T11",
-      "decision": "Option A -- pluggable callback. Default implementation uses _spPageContextInfo.aadTokenProviderFactory. Stub provider for local mock dev.",
+      "decision": "Option A -- pluggable callback. Default implementation uses _spPageContextInfo.aadTokenProviderFactory. Stub provider for local mock dev. No ADAL. Token used in-memory only; never stored to localStorage/sessionStorage.",
       "pending_confirmation": []
     },
     "ADR-M7-03": {
       "question": "Azure E2E gate timing: M7 vs separate gate",
       "owner": "Mouse",
-      "status": "confirmed",
+      "status": "accepted",
       "confirmed_by": "Morpheus T11",
       "decision": "Option A -- defer to M8 (per roadmap.md). M7 stays local/mock only. Live tests require opt-in LIVE_AZURE_TESTS env flag; never in public CI defaults. OQ5 closed: gate is M8.",
       "pending_confirmation": []
@@ -88,11 +90,21 @@
       "decision": "Option B -- accept optional display_name: str | None = None. Display hint only. Not used for auth, not echoed in response, not forwarded downstream. Binding constraints documented in ADR 0009 (docs/adr/0009-m7-display-name-bff-body-field.md). OQ1 closed.",
       "pending_confirmation": [],
       "formal_adr": "docs/adr/0009-m7-display-name-bff-body-field.md"
+    },
+    "ADR-M7-05": {
+      "question": "OQ2: SPFx BFF token acquisition — AadHttpClient vs AadTokenProvider",
+      "owner": "Mouse",
+      "status": "accepted",
+      "confirmed_by": "Trinity T12",
+      "decision": "Option A -- AadHttpClient via context.aadHttpClientFactory.getClient(bffResourceUri). Token abstracted from web part code; Authorization header injected automatically by SPFx runtime. AadTokenProvider rejected: exposes raw token to web part, increasing persistence/logging risk. SPHttpClient prohibited for BFF calls.",
+      "pending_confirmation": [],
+      "closed": "2026-06-01",
+      "resolves": "OQ2"
     }
   },
   "task_status": {
-    "T11": "complete",
-    "T12": "pending",
+    "T11": "accepted",
+    "T12": "accepted",
     "T00": "pending",
     "T01": "pending",
     "T02": "pending",
