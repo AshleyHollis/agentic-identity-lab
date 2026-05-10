@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t05-t06-readiness-after-t04-zero-mutation-complete",
-  "status": "t04-zero-mutation-complete-t05-t06-readiness-in-progress",
+  "phase": "implement-t07-first-live-deployment-path",
+  "status": "t04-t06-protected-rehearsals-complete-t07-in-progress",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -62,9 +62,9 @@
     "T02": "complete-for-zero-mutation-readiness-optional-runtime-vars-pending-later-stages",
     "T03": "accepted-blocked-state",
     "T04": "complete-protected-oidc-contract-and-deploy-live-zero-mutation-dry-run-succeeded",
-    "T05": "in-progress",
-    "T06": "in-progress",
-    "T07": "blocked-pending-checkpoint",
+    "T05": "complete-protected-start-resume-and-nightly-shutdown-dry-runs-succeeded",
+    "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
+    "T07": "in-progress",
     "T08": "pending",
     "T09": "pending",
     "T10": "pending",
@@ -77,7 +77,7 @@
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "zero-mutation-complete-live-mutation-blocked-pending-checkpoint",
+    "status": "t04-t06-rehearsals-complete-first-live-deployment-path-in-progress",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
@@ -115,7 +115,10 @@
     "t04_dispatch_blocker": "resolved",
     "t04_oidc_contract_run": "25640650285-success",
     "t04_deploy_dry_run": "25640651013-success",
-    "t04_zero_mutation_controls": "publish_image=false; run_apply=false; run_config_rollout=false; run_app_rollout=false; execute_live_mutations=false; live_azure_tests=false"
+    "t04_zero_mutation_controls": "publish_image=false; run_apply=false; run_config_rollout=false; run_app_rollout=false; execute_live_mutations=false; live_azure_tests=false",
+    "t05_start_resume_dry_run": "25640821087-success",
+    "t05_nightly_shutdown_dry_run": "25640821891-success",
+    "t06_smoke_trace_contract_run": "25640865017-success-live-check-skipped"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [

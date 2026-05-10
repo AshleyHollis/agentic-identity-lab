@@ -7,9 +7,9 @@
 | T02 | OIDC federation verification | Tank | T01 | ✅ Complete for zero-mutation readiness (deploy/smoke/ops Entra apps + exact federated subjects verified; protected GitHub environment identity secrets repaired from matching federated apps; deterministic lab RG now set (`rg-agent-identity-lab-dev-aca`, `eastus`), RG-scoped RBAC bound for deploy/smoke/ops, RG/location vars set, and deterministic `ACA_APP_NAMES` + `APIM_SERVICE_NAME` set across protected environments; optional lifecycle/smoke runtime vars remain later-stage blockers) |
 | T03 | Security gate review | Trinity | T00-T02 | ✅ Complete (accepted blocked state) |
 | T04 | Zero-mutation deploy rehearsal | Tank | T02, T03 | ✅ Complete (protected OIDC contract and deploy-live dry-run passed with mutation flags disabled and `live_azure_tests=false`) |
-| T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | Ready / In progress |
-| T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | Ready / In progress |
-| T07 | Approved first live mutation window | Tank | T04-T06, user approval | Blocked pending [CHECKPOINT] |
+| T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | ✅ Complete (protected start/resume and nightly shutdown dry-runs passed) |
+| T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
+| T07 | Approved first live mutation window | Tank | T04-T06, user approval | Ready / In progress |
 | T08 | Runtime configuration verification | Tank / Neo | T07 | Pending |
 | T09 | Browser smoke execution | Mouse / Neo | T08 | Pending |
 | T10 | Positive KQL chain verification | Neo | T09 | Pending |
@@ -32,7 +32,7 @@ python tools\ci\m8_smoke_trace_contract.py validate --workflow-file .github\work
 
 ## Live block
 
-T07 and later live-mutation tasks remain blocked until Ashley approves the [CHECKPOINT] and protected GitHub Environments are configured outside the repo.
+T07 and later live-mutation tasks require explicit protected workflow inputs and environment approval. Ashley's standing directive is to continue through deployment and end-to-end verification while attempting access first; live mutations still must remain inside protected GitHub Environment gates and redacted evidence rules.
 
 ## External setup prerequisite for T01/T02
 
