@@ -2,19 +2,25 @@
   "spec_id": "006",
   "slug": "azure-deployment-baseline",
   "milestone": "M6",
-  "phase": "spec-prep",
-  "status": "spec-ready",
+  "phase": "implementation",
+  "status": "in-progress",
   "created": "2026-06-01",
   "updated": "2026-06-01",
   "requested_by": "Ashley Hollis",
   "owners": {
-    "primary": ["Tank", "Neo"],
-    "reviewers": ["Morpheus", "Trinity"]
+    "primary": [
+      "Tank",
+      "Neo"
+    ],
+    "reviewers": [
+      "Morpheus",
+      "Trinity"
+    ]
   },
   "impact": "High",
-  "spec_gate_satisfied": false,
-  "implementation_blocked": true,
-  "implementation_blocked_reason": "T12 (Trinity security review) complete. T11 (Morpheus architecture review) still pending. T00 (rename) complete per commit 1993510. Implementation unblocked after T11 sign-off. T06 and T09 are unblocked by T12 and T00; T01-T05, T07-T08 await T11.",
+  "spec_gate_satisfied": true,
+  "implementation_blocked": false,
+  "implementation_blocked_reason": "All review gates satisfied: T00 (rename) complete, T11 (Morpheus architecture review) ACCEPTED 2026-06-01, T12 (Trinity security review) ACCEPTED 2026-06-01. T01-T10 all unblocked.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -29,18 +35,18 @@
     "ADR-M6-01": {
       "question": "ACA as default deployment path vs AKS",
       "owner": "Morpheus",
-      "status": "pending-review",
-      "decision": null,
-      "decided_by": null,
-      "decided_date": null
+      "status": "accepted",
+      "decision": "Option A -- ACA as default deployment path. AKS optional track from M5 preserved unchanged.",
+      "decided_by": "Morpheus",
+      "decided_date": "2026-06-01"
     },
     "ADR-M6-02": {
       "question": "Azure Monitor OTLP endpoint vs Log Analytics direct ingestion",
       "owner": "Tank",
-      "status": "pending-review",
-      "decision": null,
-      "decided_by": null,
-      "decided_date": null
+      "status": "accepted",
+      "decision": "Option A -- OTLP endpoint env var swap. Zero code change from M5 instrumentation. APPLICATIONINSIGHTS_CONNECTION_STRING deferred to post-M6.",
+      "decided_by": "Morpheus",
+      "decided_date": "2026-06-01"
     },
     "ADR-M6-03": {
       "question": "Managed identity assignment strategy: user-assigned vs system-assigned per container app",
@@ -52,7 +58,7 @@
     }
   },
   "task_status": {
-    "T00": "pending",
+    "T00": "complete",
     "T01": "pending",
     "T02": "pending",
     "T03": "pending",
@@ -63,7 +69,7 @@
     "T08": "pending",
     "T09": "pending",
     "T10": "pending",
-    "T11": "pending",
+    "T11": "complete",
     "T12": "complete"
   },
   "validation_commands": [
@@ -74,7 +80,10 @@
     "docker compose -f docker\\docker-compose.yml -f docker\\docker-compose.strict-aca.yml config --quiet"
   ],
   "dependencies": {
-    "blocking": ["005-local-runtime-ergonomics", "002-aks-entra-agent-id"],
+    "blocking": [
+      "005-local-runtime-ergonomics",
+      "002-aks-entra-agent-id"
+    ],
     "notes": "M6 Task 0 (T00) depends on Ashley approval of Agent Execution Service naming. All implementation tasks depend on T00 completing (rename) and T11+T12 review sign-offs."
   },
   "notes": [
