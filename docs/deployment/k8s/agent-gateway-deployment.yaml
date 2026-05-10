@@ -1,0 +1,156 @@
+# ILLUSTRATIVE REFERENCE ONLY — not applied by CI or production automation.
+# All image references, GUIDs, and IDs are placeholder values.
+#
+# Purpose: Illustrative Deployment spec for the Agentic Layer pod in AKS.
+#
+# Pod layout:
+#   Container 1 — agentic-layer:
+#     The lab's application-level orchestration service (apps/agent-gateway/).
+#     Handles agent tool calls, identity context, and OBO boundaries.
+#     Exposes port 8000 for inbound HTTP/MCP traffic from the AKS Agent Gateway.
+#
+#   Container 2 — entra-agent-id-sidecar:
+#     The Entra Agent ID SDK container. Exposes the Agent OBO sidecar endpoints:
+#       GET  /Validate
+#       GET  /AuthorizationHeader/{apiName}
+#       POST /DownstreamApi/{apiName}
+#     Binds ONLY to 127.0.0.1:9090 — never reachable outside this pod.
+#     The Agentic Layer calls the sidecar at http://localhost:9090.
+#
+# AKS Agent Gateway (agentgateway.dev) placement:
+#   The AKS Agent Gateway is a SEPARATE pod (not a container in this Deployment).
+#   It proxies inbound MCP traffic from external clients to the agentic-layer
+#   container on port 8000. It injects the W3C traceparent header and creates
+#   a parent OTEL span before forwarding requests to the Agentic Layer.
+#   See docs/deployment/k8s/README.md for the full topology diagram.
+#
+# Workload Identity:
+#   The pod annotation azure.workload.identity/use: "true" instructs the
+#   Azure Workload Identity webhook to inject a federated token volume.
+#   The Entra Agent ID sidecar uses this token to acquire Agent OBO tokens
+#   on behalf of the Agentic Layer without any client secret.
+#
+# Spec: 002-aks-entra-agent-id / FR-08 / T05
+# Terminology: "Agentic Layer" = apps/agent-gateway/ (Docker Compose service: agent-gateway)
+#              "AKS Agent Gateway" = agentgateway.dev proxy (separate pod)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-gateway
+  namespace: agent-workloads
+  labels:
+    app: agent-gateway
+    app.kubernetes.io/name: agentic-layer
+    app.kubernetes.io/component: agentic-layer
+    app.kubernetes.io/part-of: agentic-identity-lab
+    app.kubernetes.io/managed-by: illustrative-reference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-gateway
+  template:
+    metadata:
+      labels:
+        app: agent-gateway
+        app.kubernetes.io/name: agentic-layer
+        app.kubernetes.io/component: agentic-layer
+      annotations:
+        # Required: instructs the Azure Workload Identity webhook to inject
+        # the federated token volume and environment variables into this pod.
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: agentic-layer
+
+      containers:
+        # ── Container 1: Agentic Layer ────────────────────────────────────────
+        # The lab's application-level orchestration service.
+        # Filesystem path: apps/agent-gateway/ (legacy; not renamed).
+        # Docker Compose service name: agent-gateway (preserved for compatibility).
+        - name: agentic-layer
+          # Replace with a real image reference before any live use.
+          image: your-registry.azurecr.io/agentic-layer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            # AUTH_MODE controls mock vs strict identity validation.
+            # Set to "strict" in production; "mock" for local/offline testing only.
+            - name: AUTH_MODE
+              value: "mock"
+            # Sidecar base URL — always localhost; never an external address.
+            - name: AGENT_SIDECAR_URL
+              value: "http://localhost:9090"
+            # OTEL collector endpoint for distributed tracing (see design.md §Tracing).
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "agent-gateway"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+        # ── Container 2: Entra Agent ID Sidecar ───────────────────────────────
+        # The Entra Agent ID SDK container. Performs Agent OBO token exchange on
+        # behalf of the Agentic Layer.
+        #
+        # IMPORTANT: This sidecar binds only to 127.0.0.1 (localhost). It must
+        # NEVER be exposed via a Kubernetes Service or external port. The
+        # NetworkPolicy (network-policy.yaml) provides additional defence-in-depth.
+        #
+        # Endpoints exposed on http://localhost:9090:
+        #   GET  /Validate
+        #   GET  /AuthorizationHeader/{apiName}
+        #   POST /DownstreamApi/{apiName}
+        - name: entra-agent-id-sidecar
+          # Replace with the real Entra Agent ID sidecar image reference.
+          image: your-registry.azurecr.io/entra-agent-id-sidecar:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            # localhost binding — the containerPort declaration is informational only.
+            # Actual binding is controlled by the sidecar process via its config.
+            # No Kubernetes Service should expose this port externally.
+            - name: sidecar-local
+              containerPort: 9090
+              # hostIP is not set here; the sidecar process itself binds to 127.0.0.1.
+              protocol: TCP
+          env:
+            # Placeholder blueprint client ID — matches service-account.yaml annotation.
+            - name: AGENT_ID_CLIENT_ID
+              value: "00000000-0000-0000-0000-000000000201"
+            # Placeholder tenant ID — matches service-account.yaml annotation.
+            - name: AGENT_ID_TENANT_ID
+              value: "00000000-0000-0000-0000-000000000001"
+            # Sidecar listen address — always localhost only.
+            - name: AGENT_ID_LISTEN_ADDR
+              value: "127.0.0.1:9090"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+
+      # Image pull secret for the placeholder container registry.
+      # Replace with a real imagePullSecret name if using a private registry.
+      imagePullSecrets:
+        - name: acr-pull-secret-placeholder

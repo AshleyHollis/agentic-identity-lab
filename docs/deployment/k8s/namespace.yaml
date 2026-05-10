@@ -1,0 +1,18 @@
+# ILLUSTRATIVE REFERENCE ONLY — not applied by CI or production automation.
+# All names and labels are placeholder values.
+#
+# Purpose: Kubernetes namespace that isolates Agentic Layer workloads from
+# other services in the AKS cluster.
+#
+# Spec: 002-aks-entra-agent-id / FR-08 / T05
+# Terminology: "Agentic Layer" = apps/agent-gateway/ (legacy filesystem path preserved)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-workloads
+  labels:
+    # Workload identity label required for Azure Workload Identity webhook to inject
+    # the token volume into pods within this namespace.
+    azure.workload.identity/use: "true"
+    app.kubernetes.io/part-of: agentic-identity-lab
+    app.kubernetes.io/managed-by: illustrative-reference

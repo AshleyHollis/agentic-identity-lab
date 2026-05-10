@@ -1,0 +1,66 @@
+# ILLUSTRATIVE REFERENCE ONLY — not applied by CI or production automation.
+# All names and labels are placeholder values.
+#
+# Purpose: NetworkPolicy that restricts access to the Entra Agent ID sidecar port (9090)
+# so that no pod outside the agent-gateway pod can reach the sidecar endpoint.
+#
+# Security intent (see design.md §Security Design Notes, note 5):
+#   The Entra Agent ID sidecar exposes Agent OBO token endpoints on localhost:9090.
+#   The sidecar process itself binds to 127.0.0.1, which prevents direct cross-pod
+#   TCP connections to the sidecar port at the OS network layer.
+#
+#   This NetworkPolicy provides defence-in-depth: it explicitly allows ingress only
+#   to the Agentic Layer's application port (8000) and denies any ingress to port 9090
+#   from all other pods in the cluster. This prevents a misconfiguration (e.g., a
+#   Service or LoadBalancer accidentally targeting port 9090) from exposing the sidecar
+#   to traffic from outside the pod.
+#
+#   Cross-pod sidecar access prevention:
+#     - Ingress to port 9090 is NOT included in any allow rule.
+#     - With policyTypes: [Ingress] applied, all ingress not explicitly allowed is denied.
+#     - No other pod in the cluster (including other agent-gateway replicas) can reach
+#       port 9090 on this pod via the pod network.
+#
+# Spec: 002-aks-entra-agent-id / FR-08 / T05
+# Terminology: "Agentic Layer" = apps/agent-gateway/; sidecar port = 9090 (placeholder)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-gateway-sidecar-isolation
+  namespace: agent-workloads
+  labels:
+    app.kubernetes.io/name: agentic-layer
+    app.kubernetes.io/part-of: agentic-identity-lab
+    app.kubernetes.io/managed-by: illustrative-reference
+spec:
+  # Select the Agentic Layer pods (labeled app: agent-gateway).
+  podSelector:
+    matchLabels:
+      app: agent-gateway
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    # Allow inbound HTTP traffic to the Agentic Layer application port (8000)
+    # from any other pod within the agent-workloads namespace (e.g., the AKS
+    # Agent Gateway pod forwarding proxied MCP requests).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agent-workloads
+      ports:
+        - protocol: TCP
+          port: 8000
+          # NOTE: Port 9090 (Entra Agent ID sidecar) is intentionally absent from
+          # all ingress rules. With Ingress policy type enforced, any traffic
+          # targeting port 9090 from outside this pod is dropped by the policy.
+          # This is the primary cross-pod sidecar access prevention mechanism at
+          # the Kubernetes network layer.
+
+  # No egress rules are defined here. The Agentic Layer pod requires outbound
+  # access to:
+  #   - The MCP protected API (internal cluster traffic)
+  #   - Azure Entra ID token endpoints (via the sidecar on localhost — no egress policy needed)
+  #   - The OTEL collector (port 4317) for distributed tracing
+  # Add an Egress NetworkPolicy to restrict outbound traffic in production environments.
