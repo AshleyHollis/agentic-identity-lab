@@ -7,6 +7,11 @@ on:
         description: "Placeholder environment selector (example: agentidlab-live)"
         required: true
         default: "agentidlab-live"
+      dry_run:
+        description: "Collect lifecycle posture without mutating resources"
+        required: false
+        default: true
+        type: boolean
       run_readiness_probe:
         description: "Run optional HTTP readiness probe"
         required: false
@@ -71,6 +76,14 @@ jobs:
               continue
             fi
             current_min="$(az containerapp show --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --query "properties.template.scale.minReplicas" -o tsv || echo "")"
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              if [[ -z "${current_min}" || "${current_min}" == "0" ]]; then
+                echo "aca,${app_trimmed},would_start,dry-run mode; current minReplicas=${current_min:-unknown}" >> m8-start-resume-summary.csv
+              else
+                echo "aca,${app_trimmed},already_running,dry-run mode; current minReplicas=${current_min}" >> m8-start-resume-summary.csv
+              fi
+              continue
+            fi
             if [[ -z "${current_min}" || "${current_min}" == "0" ]]; then
               az containerapp update --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --min-replicas 1 --output none
               echo "aca,${app_trimmed},started,minReplicas set to 1" >> m8-start-resume-summary.csv
@@ -95,7 +108,7 @@ jobs:
           echo "resource_group,<environment>,destroy_only,manual destroy workflow only; not part of start/resume" >> m8-start-resume-summary.csv
 
       - name: Verify readiness
-        if: ${{ inputs.run_readiness_probe }}
+        if: ${{ inputs.run_readiness_probe && !inputs.dry_run }}
         shell: bash
         run: |
           set -euo pipefail
@@ -105,6 +118,12 @@ jobs:
           fi
           curl --fail --silent --show-error --retry 5 --retry-delay 10 "${M8_READINESS_URL}" > /dev/null
           echo "Readiness probe passed (endpoint value suppressed)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dry-run readiness posture
+        if: ${{ inputs.run_readiness_probe && inputs.dry_run }}
+        shell: bash
+        run: |
+          echo "Readiness probe skipped because dry_run=true." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish action summary
         shell: bash

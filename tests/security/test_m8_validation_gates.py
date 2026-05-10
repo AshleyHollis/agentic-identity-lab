@@ -42,6 +42,16 @@ def test_shutdown_workflow_blocks_broad_mutation_commands() -> None:
         assert re.search(pattern, shutdown, re.IGNORECASE) is None
 
 
+def test_start_resume_workflow_has_dry_run_guardrails() -> None:
+    start_resume = _read(ROOT / ".github" / "workflows" / "m8-start-resume.yml")
+
+    assert "dry_run:" in start_resume
+    assert "default: true" in start_resume
+    assert 'if [[ "${{ inputs.dry_run }}" == "true" ]]' in start_resume
+    assert "would_start" in start_resume
+    assert "inputs.run_readiness_probe && !inputs.dry_run" in start_resume
+
+
 def test_m8_kql_contract_files_have_required_coverage() -> None:
     offenders = run_kql_checks()
     assert offenders == [], "KQL contract offenders found:\n" + "\n".join(offenders)

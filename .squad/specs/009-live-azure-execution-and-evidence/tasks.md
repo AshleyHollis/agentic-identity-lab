@@ -4,11 +4,11 @@
 |---|---|---|---|---|
 | T00 | Spec/ADR planning package | Morpheus | M8 closed | ✅ Complete |
 | T01 | Protected environment gate audit | Tank | T00 | ✅ Complete (required environment shells exist; reviewer gate configured for authenticated lab operator; env placeholders remain external) |
-| T02 | OIDC federation verification | Tank | T01 | Accepted partial / Blocked (deploy/smoke/ops Entra apps + exact federated subjects + ID secrets verified; deterministic lab RG now set (`rg-agent-identity-lab-dev-aca`, `eastus`), RG-scoped RBAC bound for deploy/smoke/ops, RG/location vars set, and deterministic `ACA_APP_NAMES` + `APIM_SERVICE_NAME` set across protected environments; optional runtime vars and protected zero-mutation dispatch still pending) |
+| T02 | OIDC federation verification | Tank | T01 | ✅ Complete for zero-mutation readiness (deploy/smoke/ops Entra apps + exact federated subjects verified; protected GitHub environment identity secrets repaired from matching federated apps; deterministic lab RG now set (`rg-agent-identity-lab-dev-aca`, `eastus`), RG-scoped RBAC bound for deploy/smoke/ops, RG/location vars set, and deterministic `ACA_APP_NAMES` + `APIM_SERVICE_NAME` set across protected environments; optional lifecycle/smoke runtime vars remain later-stage blockers) |
 | T03 | Security gate review | Trinity | T00-T02 | ✅ Complete (accepted blocked state) |
-| T04 | Zero-mutation deploy rehearsal | Tank | T02, T03 | Blocked (dispatch attempt executed; GitHub Actions workflow-dispatch API returned 404 because remote repository currently has no registered workflows) |
-| T05 | Lifecycle readiness rehearsal | Tank | T02, T03 | Pending |
-| T06 | Live smoke contract rehearsal | Neo / Mouse | T03 | Pending |
+| T04 | Zero-mutation deploy rehearsal | Tank | T02, T03 | ✅ Complete (protected OIDC contract and deploy-live dry-run passed with mutation flags disabled and `live_azure_tests=false`) |
+| T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | Ready / In progress |
+| T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | Ready / In progress |
 | T07 | Approved first live mutation window | Tank | T04-T06, user approval | Blocked pending [CHECKPOINT] |
 | T08 | Runtime configuration verification | Tank / Neo | T07 | Pending |
 | T09 | Browser smoke execution | Mouse / Neo | T08 | Pending |
@@ -45,5 +45,5 @@ The following must be completed outside the repository before T04/T05/T06 can pr
    - `repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-deploy`
    - `repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-smoke`
    - `repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-ops`
-5. Re-run zero-mutation validations and protected OIDC contract workflow. (Attempted in T04; blocked because remote repository Actions workflow inventory is empty and dispatch endpoints return HTTP 404.)
+5. ✅ Re-run zero-mutation validations and protected OIDC contract workflow. T04 succeeded after publishing workflow files to `main`, granting the deploy workflow's reusable smoke call `id-token: write`, repairing tenant/subscription environment secrets from the authenticated Azure context, and resetting deploy/smoke/ops client-ID secrets from Entra app registrations with matching federated subjects.
 

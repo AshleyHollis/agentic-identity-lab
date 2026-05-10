@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t04-dispatch-attempt-blocked-remote-workflow-inventory-empty",
-  "status": "t01-complete-t02-accepted-partial-t04-dispatch-blocked-remote-workflows-missing",
+  "phase": "implement-t05-t06-readiness-after-t04-zero-mutation-complete",
+  "status": "t04-zero-mutation-complete-t05-t06-readiness-in-progress",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -23,8 +23,8 @@
   },
   "impact": "High",
   "spec_gate_satisfied": true,
-  "implementation_blocked": true,
-  "implementation_blocked_reason": "T04 zero-mutation protected dispatch rehearsal was attempted, but GitHub workflow_dispatch endpoints for m8-live-oidc-contract.yml and m8-deploy-live.yml return HTTP 404 because the remote repository currently reports no registered workflows. Zero-mutation/lifecycle validators pass; smoke-runtime placeholders remain pending for post-T04 stages.",
+  "implementation_blocked": false,
+  "implementation_blocked_reason": "",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -47,7 +47,8 @@
     ".squad\\decisions\\inbox\\tank-m9-rg-rbac-binding-result.md": "complete",
     ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-runtime-vars-t04-readiness.md": "complete",
-    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete"
+    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal-success.md": "complete"
   },
   "adrs": {
     "ADR-M9-01": "Reuse M8 protected workflow family",
@@ -58,11 +59,11 @@
   "task_status": {
     "T00": "complete",
     "T01": "complete-environment-shells-created-no-secrets",
-    "T02": "accepted-partial-rg-rbac-trinity-accepted-deterministic-runtime-names-set-zero-mutation-dispatch-pending",
+    "T02": "complete-for-zero-mutation-readiness-optional-runtime-vars-pending-later-stages",
     "T03": "accepted-blocked-state",
-    "T04": "blocked-dispatch-attempted-workflow-dispatch-endpoints-404-no-remote-workflows",
-    "T05": "pending",
-    "T06": "pending",
+    "T04": "complete-protected-oidc-contract-and-deploy-live-zero-mutation-dry-run-succeeded",
+    "T05": "in-progress",
+    "T06": "in-progress",
     "T07": "blocked-pending-checkpoint",
     "T08": "pending",
     "T09": "pending",
@@ -76,13 +77,13 @@
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "blocked-remote-workflow-dispatch-unavailable",
+    "status": "zero-mutation-complete-live-mutation-blocked-pending-checkpoint",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
     "canonical_path": "browser -> APIM -> BFF -> Agent Execution Service -> MCP Protected API -> Azure Monitor/Application Insights",
-    "session_live_execution": "dispatch-attempt-blocked",
-    "session_live_evidence": "redacted-blocker-note-only",
+    "session_live_execution": "zero-mutation-protected-workflows-succeeded-no-live-mutation",
+    "session_live_evidence": "redacted-run-status-only",
     "t01_audit_artifact": ".squad\\decisions\\inbox\\tank-m9-t01-protected-env-audit.md",
     "repository_environment_count": 3,
     "trinity_t03_verdict": "accepted-blocked-state",
@@ -102,7 +103,7 @@
     "t02_trinity_verdict": "accepted-partial-blocked",
     "t02_review_live_execution": "not-executed",
     "t02_review_live_evidence": "none",
-    "t02_remaining_blockers": "protected zero-mutation OIDC/deploy dispatches are blocked because workflow_dispatch endpoints return HTTP 404 with empty remote workflow inventory; optional lifecycle runtime vars (APIM_STOP_SUPPORTED, M8_READINESS_URL) and smoke runtime values remain pending for post-T04 execution paths",
+    "t02_remaining_blockers": "zero-mutation OIDC/deploy dispatches completed; optional lifecycle runtime vars (APIM_STOP_SUPPORTED, M8_READINESS_URL) and smoke runtime values remain pending for post-T04 execution paths",
     "t02_trinity_oidc_binding_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-oidc-binding-review.md",
     "t02_trinity_oidc_binding_review_verdict": "accepted-partial-blocked",
     "t02_rg_scope": "rg-agent-identity-lab-dev-aca",
@@ -111,7 +112,10 @@
     "t02_rg_rbac_artifact": ".squad\\decisions\\inbox\\tank-m9-rg-rbac-binding-result.md",
     "t02_trinity_rg_rbac_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md",
     "t02_trinity_rg_rbac_review_verdict": "rg-rbac-portion-accepted-t02-accepted-partial-blocked",
-    "t04_dispatch_blocker": "workflow_dispatch HTTP 404 for m8-live-oidc-contract.yml and m8-deploy-live.yml; gh workflow inventory on remote repository returned empty"
+    "t04_dispatch_blocker": "resolved",
+    "t04_oidc_contract_run": "25640650285-success",
+    "t04_deploy_dry_run": "25640651013-success",
+    "t04_zero_mutation_controls": "publish_image=false; run_apply=false; run_config_rollout=false; run_app_rollout=false; execute_live_mutations=false; live_azure_tests=false"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [
