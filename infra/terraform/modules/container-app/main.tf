@@ -34,6 +34,14 @@ resource "azurerm_container_app" "this" {
         value = var.otel_endpoint
       }
 
+      dynamic "env" {
+        for_each = var.env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
       # Additional env vars (AUTH_ISSUER, AUTH_JWKS_URL, ALLOWED_AUDIENCES, etc.)
       # are injected at deploy time via tfvars and are NOT committed to this repository.
     }
@@ -41,7 +49,7 @@ resource "azurerm_container_app" "this" {
 
   ingress {
     external_enabled = var.external_enabled
-    target_port      = 8080
+    target_port      = var.target_port
 
     traffic_weight {
       percentage      = 100

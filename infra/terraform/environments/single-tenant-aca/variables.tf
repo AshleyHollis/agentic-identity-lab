@@ -52,6 +52,54 @@ variable "otel_endpoint" {
   default     = ""
 }
 
+variable "apim_sku_name" {
+  type        = string
+  description = "APIM SKU for the lab. Consumption_0 keeps the protected live lab lower cost than Developer_1."
+  default     = "Consumption_0"
+}
+
+variable "auth_issuer" {
+  type        = string
+  description = "Strict auth issuer URL supplied at deploy time."
+  default     = "https://login.microsoftonline.com/{tenant_id}/v2.0"
+}
+
+variable "auth_jwks_url" {
+  type        = string
+  description = "Strict auth JWKS URL supplied at deploy time."
+  default     = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+}
+
+variable "trusted_tenants" {
+  type        = string
+  description = "Comma-separated trusted tenant IDs supplied at deploy time."
+  default     = "00000000-0000-0000-0000-000000000000"
+}
+
+variable "bff_allowed_audiences" {
+  type        = string
+  description = "Comma-separated BFF allowed audiences supplied at deploy time."
+  default     = "api://agent-identity-lab-dev-bff"
+}
+
+variable "agent_execution_allowed_audiences" {
+  type        = string
+  description = "Comma-separated Agent Execution Service allowed audiences supplied at deploy time."
+  default     = "api://agent-identity-lab-dev-agent-execution"
+}
+
+variable "mcp_allowed_audiences" {
+  type        = string
+  description = "Comma-separated MCP Protected API allowed audiences supplied at deploy time."
+  default     = "api://agent-identity-lab-dev-mcp"
+}
+
+variable "blueprint_audience" {
+  type        = string
+  description = "Blueprint audience expected by Agent Execution Service in strict mode."
+  default     = "api://agent-identity-lab-dev-bff"
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to all resources."

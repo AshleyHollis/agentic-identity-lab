@@ -78,8 +78,17 @@ module "container_app_bff" {
   container_apps_environment_id = module.container_apps_env.environment_id
   image                         = var.bff_image
   managed_identity_id           = module.managed_identity_bff.identity_id
+  external_enabled              = true
   otel_endpoint                 = var.otel_endpoint
-  tags                          = var.tags
+  env_vars = {
+    SERVICE_NAME      = "identity-lab-bff"
+    AUTH_ISSUER       = var.auth_issuer
+    AUTH_JWKS_URL     = var.auth_jwks_url
+    TRUSTED_TENANTS   = var.trusted_tenants
+    ALLOWED_AUDIENCES = var.bff_allowed_audiences
+    REQUIRED_SCOPES   = "mcp.access"
+  }
+  tags = var.tags
 }
 
 module "container_app_agent_execution" {
@@ -91,7 +100,18 @@ module "container_app_agent_execution" {
   image                         = var.agent_execution_image
   managed_identity_id           = module.managed_identity_agent_execution.identity_id
   otel_endpoint                 = var.otel_endpoint
-  tags                          = var.tags
+  env_vars = {
+    SERVICE_NAME            = "identity-lab-agent-execution"
+    AUTH_ISSUER             = var.auth_issuer
+    AUTH_JWKS_URL           = var.auth_jwks_url
+    TRUSTED_TENANTS         = var.trusted_tenants
+    ALLOWED_AUDIENCES       = var.agent_execution_allowed_audiences
+    REQUIRED_SCOPES         = "mcp.access,mcp.write"
+    BLUEPRINT_AUDIENCE      = var.blueprint_audience
+    OBO_DOWNSTREAM_AUDIENCE = var.mcp_allowed_audiences
+    OBO_REQUIRED_SCOPES     = "mcp.access,mcp.write"
+  }
+  tags = var.tags
 }
 
 module "container_app_mcp_protected_api" {
@@ -103,7 +123,15 @@ module "container_app_mcp_protected_api" {
   image                         = var.mcp_image
   managed_identity_id           = module.managed_identity_mcp_protected_api.identity_id
   otel_endpoint                 = var.otel_endpoint
-  tags                          = var.tags
+  env_vars = {
+    SERVICE_NAME      = "identity-lab-mcp-protected-api"
+    AUTH_ISSUER       = var.auth_issuer
+    AUTH_JWKS_URL     = var.auth_jwks_url
+    TRUSTED_TENANTS   = var.trusted_tenants
+    ALLOWED_AUDIENCES = var.mcp_allowed_audiences
+    REQUIRED_SCOPES   = "mcp.access,mcp.write"
+  }
+  tags = var.tags
 }
 
 # T04: APIM wired to BFF FQDN. C2: APIM MI must not substitute delegated user token.
@@ -113,6 +141,7 @@ module "apim" {
   resource_group_name = module.resource_group.name
   location            = var.location
   backend_url         = "https://${module.container_app_bff.fqdn}"
+  sku_name            = var.apim_sku_name
   tags                = var.tags
 }
 

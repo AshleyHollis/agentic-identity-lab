@@ -49,10 +49,22 @@ variable "external_enabled" {
   default     = false
 }
 
+variable "target_port" {
+  type        = number
+  description = "Container port exposed by the service."
+  default     = 8000
+}
+
 variable "otel_endpoint" {
   type        = string
   description = "OTLP exporter endpoint (e.g., Azure Monitor OTLP URL). Empty string disables export."
   default     = ""
+}
+
+variable "env_vars" {
+  type        = map(string)
+  description = "Additional non-secret environment variables for the container."
+  default     = {}
 }
 
 variable "tags" {

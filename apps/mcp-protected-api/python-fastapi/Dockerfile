@@ -9,7 +9,7 @@ COPY apps/shared/python/identity_lab_diagnostics /app/identity_lab_diagnostics
 COPY apps/mcp-protected-api/python-fastapi /app/service
 
 WORKDIR /app/service
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir "fastapi>=0.110.0" "uvicorn[standard]>=0.29.0"
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 ENV PYTHONPATH=/app
 
 EXPOSE 8000

@@ -137,14 +137,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [preflight, azure-auth-deploy]
     environment: lab-live-azure-deploy
+    outputs:
+      bff_image: ${{ steps.images.outputs.bff_image }}
+      agent_execution_image: ${{ steps.images.outputs.agent_execution_image }}
+      mcp_image: ${{ steps.images.outputs.mcp_image }}
     permissions:
       contents: read
       id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Azure login (OIDC deploy identity)
+        if: ${{ inputs.publish_image && inputs.execute_live_mutations }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
       - name: Dry-run-safe image stage
+        id: images
         shell: bash
         run: |
           set -euo pipefail
@@ -155,13 +174,40 @@ jobs:
               echo "docker build -t <acr-login-server>/agent-execution:${{ inputs.image_tag }} apps/agent-execution/python-fastapi-agent-framework"
               echo "docker push <acr-login-server>/agent-execution:${{ inputs.image_tag }}"
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "bff_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
+            echo "agent_execution_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
+            echo "mcp_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [[ "${{ inputs.execute_live_mutations }}" != "true" ]]; then
             echo "publish_image=true but execute_live_mutations=false; keeping stage dry-run-safe." >> "$GITHUB_STEP_SUMMARY"
+            echo "bff_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
+            echo "agent_execution_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
+            echo "mcp_image=mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "Replace with protected image build/push commands for private environment execution." >> "$GITHUB_STEP_SUMMARY"
+          test -n "${AZURE_RESOURCE_GROUP}"
+          test -n "${AZURE_LOCATION}"
+          suffix="$(printf '%s' "${AZURE_SUBSCRIPTION_ID}${AZURE_RESOURCE_GROUP}" | sha256sum | cut -c1-12)"
+          acr_name="ailab${suffix}"
+          if ! az acr show --name "${acr_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --output none 2>/dev/null; then
+            az acr create \
+              --name "${acr_name}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --location "${AZURE_LOCATION}" \
+              --sku Basic \
+              --admin-enabled false \
+              --output none
+          fi
+          login_server="$(az acr show --name "${acr_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query loginServer -o tsv)"
+          tag="${{ inputs.image_tag }}-${{ github.run_number }}"
+          az acr build --registry "${acr_name}" --image "bff:${tag}" --file apps/bff/python-fastapi/Dockerfile . --output none
+          az acr build --registry "${acr_name}" --image "agent-execution:${tag}" --file apps/agent-execution/python-fastapi-agent-framework/Dockerfile . --output none
+          az acr build --registry "${acr_name}" --image "mcp-protected-api:${tag}" --file apps/mcp-protected-api/python-fastapi/Dockerfile . --output none
+          echo "bff_image=${login_server}/bff:${tag}" >> "$GITHUB_OUTPUT"
+          echo "agent_execution_image=${login_server}/agent-execution:${tag}" >> "$GITHUB_OUTPUT"
+          echo "mcp_image=${login_server}/mcp-protected-api:${tag}" >> "$GITHUB_OUTPUT"
+          echo "Published service images to protected lab ACR (registry value suppressed)." >> "$GITHUB_STEP_SUMMARY"
 
   terraform-plan:
     name: Terraform plan boundary
@@ -210,13 +256,38 @@ jobs:
   protected-apply:
     name: Protected IaC apply boundary
     runs-on: ubuntu-latest
-    needs: [preflight, terraform-plan]
+    needs: [preflight, build-publish, terraform-plan]
     if: ${{ inputs.run_apply }}
     environment: lab-live-azure-deploy
     permissions:
       contents: read
       id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: true
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Azure login (OIDC deploy identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
       - name: Apply stage guardrails
         shell: bash
         run: |
@@ -225,9 +296,67 @@ jobs:
             echo "run_apply=true but execute_live_mutations=false; skipping live terraform apply by default." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "Protected apply boundary approved."
-          echo "Scaffold command (not executed in this public-safe template):" >> "$GITHUB_STEP_SUMMARY"
-          echo "terraform -chdir=infra/terraform/environments/single-tenant-aca apply m8-deploy-live.tfplan" >> "$GITHUB_STEP_SUMMARY"
+          test -n "${AZURE_RESOURCE_GROUP}"
+          test -n "${AZURE_LOCATION}"
+
+      - name: Bootstrap private Terraform state
+        if: ${{ inputs.execute_live_mutations }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="$(printf '%s' "${AZURE_SUBSCRIPTION_ID}${AZURE_RESOURCE_GROUP}" | sha256sum | cut -c1-12)"
+          state_account="ailabtf${suffix}"
+          if ! az storage account show --name "${state_account}" --resource-group "${AZURE_RESOURCE_GROUP}" --output none 2>/dev/null; then
+            az storage account create \
+              --name "${state_account}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --location "${AZURE_LOCATION}" \
+              --sku Standard_LRS \
+              --kind StorageV2 \
+              --min-tls-version TLS1_2 \
+              --allow-blob-public-access false \
+              --output none
+          fi
+          export ARM_ACCESS_KEY="$(az storage account keys list --account-name "${state_account}" --resource-group "${AZURE_RESOURCE_GROUP}" --query '[0].value' -o tsv)"
+          az storage container create --name tfstate --account-name "${state_account}" --account-key "${ARM_ACCESS_KEY}" --output none
+          {
+            echo "TF_STATE_STORAGE_ACCOUNT=${state_account}"
+            echo "ARM_ACCESS_KEY=${ARM_ACCESS_KEY}"
+          } >> "$GITHUB_ENV"
+          echo "Private Terraform state backend is ready (state account value suppressed)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Terraform apply ACA baseline
+        if: ${{ inputs.execute_live_mutations }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          workdir="infra/terraform/environments/single-tenant-aca"
+          cat > "${workdir}/live.auto.tfvars" <<EOF
+          environment = "dev"
+          location = "${AZURE_LOCATION}"
+          subscription_id = "${AZURE_SUBSCRIPTION_ID}"
+          tenant_id = "${AZURE_TENANT_ID}"
+          resource_group_name = "${AZURE_RESOURCE_GROUP}"
+          bff_image = "${{ needs.build-publish.outputs.bff_image }}"
+          agent_execution_image = "${{ needs.build-publish.outputs.agent_execution_image }}"
+          mcp_image = "${{ needs.build-publish.outputs.mcp_image }}"
+          apim_sku_name = "Consumption_0"
+          auth_issuer = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0"
+          auth_jwks_url = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys"
+          trusted_tenants = "${AZURE_TENANT_ID}"
+          bff_allowed_audiences = "api://agent-identity-lab-dev-bff"
+          agent_execution_allowed_audiences = "api://agent-identity-lab-dev-agent-execution"
+          mcp_allowed_audiences = "api://agent-identity-lab-dev-mcp"
+          blueprint_audience = "api://agent-identity-lab-dev-bff"
+          EOF
+          terraform -chdir="${workdir}" init \
+            -input=false \
+            -backend-config="resource_group_name=${AZURE_RESOURCE_GROUP}" \
+            -backend-config="storage_account_name=${TF_STATE_STORAGE_ACCOUNT}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=single-tenant-aca.tfstate"
+          terraform -chdir="${workdir}" apply -auto-approve -input=false -no-color
+          echo "Terraform apply completed for the ACA baseline." >> "$GITHUB_STEP_SUMMARY"
 
   config-rollout:
     name: Config rollout boundary
