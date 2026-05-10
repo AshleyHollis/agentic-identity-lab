@@ -476,6 +476,19 @@ jobs:
               --role AcrPull \
               --scope "${acr_id}" \
               --output none 2>/dev/null || true
+            acrpull_ready=false
+            for role_attempt in {1..12}; do
+              assignment_count="$(az role assignment list --assignee "${principal_id}" --scope "${acr_id}" --query "[?roleDefinitionName=='AcrPull'] | length(@)" -o tsv)"
+              if [[ "${assignment_count}" != "0" ]]; then
+                acrpull_ready=true
+                break
+              fi
+              sleep 10
+            done
+            if [[ "${acrpull_ready}" != "true" ]]; then
+              echo "Managed identity ${identity_name} does not have AcrPull on the protected ACR." >&2
+              exit 1
+            fi
             app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
             patch_file="$(mktemp)"
             python - "$app_name" "${AZURE_RESOURCE_GROUP}" "${app_to_image[$app_name]}" "${login_server}" "${identity_id}" "$patch_file" <<'PY'
