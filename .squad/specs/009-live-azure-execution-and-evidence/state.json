@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t07-first-live-deployment-path",
-  "status": "t04-t06-protected-rehearsals-complete-t07-in-progress",
+  "phase": "implement-t08-runtime-configuration-verification",
+  "status": "t07-protected-live-deployment-complete-t08-in-progress",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -64,8 +64,8 @@
     "T04": "complete-protected-oidc-contract-and-deploy-live-zero-mutation-dry-run-succeeded",
     "T05": "complete-protected-start-resume-and-nightly-shutdown-dry-runs-succeeded",
     "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
-    "T07": "in-progress",
-    "T08": "pending",
+    "T07": "complete-protected-live-deploy-run-25642915504-succeeded",
+    "T08": "in-progress",
     "T09": "pending",
     "T10": "pending",
     "T11": "pending",
@@ -77,12 +77,12 @@
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "t04-t06-rehearsals-complete-first-live-deployment-path-in-progress",
+    "status": "t07-protected-live-deployment-complete-runtime-verification-in-progress",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
     "canonical_path": "browser -> APIM -> BFF -> Agent Execution Service -> MCP Protected API -> Azure Monitor/Application Insights",
-    "session_live_execution": "zero-mutation-protected-workflows-succeeded-no-live-mutation",
+    "session_live_execution": "protected-live-deploy-run-25642915504-succeeded",
     "session_live_evidence": "redacted-run-status-only",
     "t01_audit_artifact": ".squad\\decisions\\inbox\\tank-m9-t01-protected-env-audit.md",
     "repository_environment_count": 3,
@@ -118,7 +118,11 @@
     "t04_zero_mutation_controls": "publish_image=false; run_apply=false; run_config_rollout=false; run_app_rollout=false; execute_live_mutations=false; live_azure_tests=false",
     "t05_start_resume_dry_run": "25640821087-success",
     "t05_nightly_shutdown_dry_run": "25640821891-success",
-    "t06_smoke_trace_contract_run": "25640865017-success-live-check-skipped"
+    "t06_smoke_trace_contract_run": "25640865017-success-live-check-skipped",
+    "t07_live_deploy_run": "25642915504-success",
+    "t07_live_deploy_scope": "image-publish-terraform-apply-aca-image-rollout",
+    "t07_aca_rollout_status": "all-container-apps-succeeded-running-target-port-8000",
+    "t08_runtime_verification_status": "in-progress"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [

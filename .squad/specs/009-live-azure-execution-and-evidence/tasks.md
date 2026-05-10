@@ -9,8 +9,8 @@
 | T04 | Zero-mutation deploy rehearsal | Tank | T02, T03 | ✅ Complete (protected OIDC contract and deploy-live dry-run passed with mutation flags disabled and `live_azure_tests=false`) |
 | T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | ✅ Complete (protected start/resume and nightly shutdown dry-runs passed) |
 | T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
-| T07 | Approved first live mutation window | Tank | T04-T06, user approval | Ready / In progress |
-| T08 | Runtime configuration verification | Tank / Neo | T07 | Pending |
+| T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `25642915504` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
+| T08 | Runtime configuration verification | Tank / Neo | T07 | In progress |
 | T09 | Browser smoke execution | Mouse / Neo | T08 | Pending |
 | T10 | Positive KQL chain verification | Neo | T09 | Pending |
 | T11 | Negative leakage verification | Trinity / Neo | T09 | Pending |

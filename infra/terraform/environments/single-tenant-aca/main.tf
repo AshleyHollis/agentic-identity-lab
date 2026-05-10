@@ -82,12 +82,13 @@ module "container_app_bff" {
   target_port                   = var.bff_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
-    SERVICE_NAME      = "identity-lab-bff"
-    AUTH_ISSUER       = var.auth_issuer
-    AUTH_JWKS_URL     = var.auth_jwks_url
-    TRUSTED_TENANTS   = var.trusted_tenants
-    ALLOWED_AUDIENCES = var.bff_allowed_audiences
-    REQUIRED_SCOPES   = "mcp.access"
+    SERVICE_NAME                          = "identity-lab-bff"
+    AUTH_ISSUER                           = var.auth_issuer
+    AUTH_JWKS_URL                         = var.auth_jwks_url
+    TRUSTED_TENANTS                       = var.trusted_tenants
+    ALLOWED_AUDIENCES                     = var.bff_allowed_audiences
+    REQUIRED_SCOPES                       = "mcp.access"
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
   }
   tags = var.tags
 }
@@ -103,15 +104,16 @@ module "container_app_agent_execution" {
   target_port                   = var.agent_execution_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
-    SERVICE_NAME            = "identity-lab-agent-execution"
-    AUTH_ISSUER             = var.auth_issuer
-    AUTH_JWKS_URL           = var.auth_jwks_url
-    TRUSTED_TENANTS         = var.trusted_tenants
-    ALLOWED_AUDIENCES       = var.agent_execution_allowed_audiences
-    REQUIRED_SCOPES         = "mcp.access,mcp.write"
-    BLUEPRINT_AUDIENCE      = var.blueprint_audience
-    OBO_DOWNSTREAM_AUDIENCE = var.mcp_allowed_audiences
-    OBO_REQUIRED_SCOPES     = "mcp.access,mcp.write"
+    SERVICE_NAME                          = "identity-lab-agent-execution"
+    AUTH_ISSUER                           = var.auth_issuer
+    AUTH_JWKS_URL                         = var.auth_jwks_url
+    TRUSTED_TENANTS                       = var.trusted_tenants
+    ALLOWED_AUDIENCES                     = var.agent_execution_allowed_audiences
+    REQUIRED_SCOPES                       = "mcp.access,mcp.write"
+    BLUEPRINT_AUDIENCE                    = var.blueprint_audience
+    OBO_DOWNSTREAM_AUDIENCE               = var.mcp_allowed_audiences
+    OBO_REQUIRED_SCOPES                   = "mcp.access,mcp.write"
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
   }
   tags = var.tags
 }
@@ -127,12 +129,13 @@ module "container_app_mcp_protected_api" {
   target_port                   = var.mcp_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
-    SERVICE_NAME      = "identity-lab-mcp-protected-api"
-    AUTH_ISSUER       = var.auth_issuer
-    AUTH_JWKS_URL     = var.auth_jwks_url
-    TRUSTED_TENANTS   = var.trusted_tenants
-    ALLOWED_AUDIENCES = var.mcp_allowed_audiences
-    REQUIRED_SCOPES   = "mcp.access,mcp.write"
+    SERVICE_NAME                          = "identity-lab-mcp-protected-api"
+    AUTH_ISSUER                           = var.auth_issuer
+    AUTH_JWKS_URL                         = var.auth_jwks_url
+    TRUSTED_TENANTS                       = var.trusted_tenants
+    ALLOWED_AUDIENCES                     = var.mcp_allowed_audiences
+    REQUIRED_SCOPES                       = "mcp.access,mcp.write"
+    APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
   }
   tags = var.tags
 }

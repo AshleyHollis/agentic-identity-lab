@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Environment variable names
 _OTEL_DISABLED_ENV = "OTEL_SDK_DISABLED"
 _OTEL_ENDPOINT_ENV = "OTEL_EXPORTER_OTLP_ENDPOINT"
+_APPLICATIONINSIGHTS_CONNECTION_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRING"
 
 # PII claim keys that must never appear as span attributes.
 _PII_KEYS: frozenset[str] = frozenset({
@@ -60,6 +61,9 @@ def _is_disabled() -> bool:
     disabled_env = os.environ.get(_OTEL_DISABLED_ENV, "").strip().lower()
     if disabled_env in ("true", "1", "yes"):
         return True
+    connection_string = os.environ.get(_APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, "").strip()
+    if connection_string:
+        return False
     endpoint = os.environ.get(_OTEL_ENDPOINT_ENV, "").strip()
     return not endpoint
 
@@ -67,10 +71,13 @@ def _is_disabled() -> bool:
 def setup_telemetry(service_name: str) -> None:
     """Initialise the global ``TracerProvider`` for *service_name*.
 
-    - When ``OTEL_SDK_DISABLED=true`` **or** ``OTEL_EXPORTER_OTLP_ENDPOINT``
-      is unset/empty, installs a ``NoOpTracerProvider`` so spans are discarded.
-    - When an OTLP endpoint is configured, installs an OTLP gRPC exporter with
-      a ``BatchSpanProcessor``.
+    - When ``OTEL_SDK_DISABLED=true`` **or** neither Azure Monitor nor OTLP
+      export is configured, installs a ``NoOpTracerProvider`` so spans are
+      discarded.
+    - When ``APPLICATIONINSIGHTS_CONNECTION_STRING`` is configured, installs an
+      Azure Monitor exporter.
+    - Otherwise, when an OTLP endpoint is configured, installs an OTLP gRPC
+      exporter with a ``BatchSpanProcessor``.
 
     This function is idempotent: calling it multiple times (e.g., in tests)
     will not raise.  Only the first call that reaches provider installation
@@ -95,12 +102,19 @@ def setup_telemetry(service_name: str) -> None:
         from opentelemetry.sdk.resources import Resource, SERVICE_NAME
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
         resource = Resource(attributes={SERVICE_NAME: service_name})
         provider = TracerProvider(resource=resource)
-        endpoint = os.environ.get(_OTEL_ENDPOINT_ENV, "").strip()
-        exporter = OTLPSpanExporter(endpoint=endpoint)
+        connection_string = os.environ.get(_APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, "").strip()
+        if connection_string:
+            from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
+
+            exporter = AzureMonitorTraceExporter(connection_string=connection_string)
+        else:
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+            endpoint = os.environ.get(_OTEL_ENDPOINT_ENV, "").strip()
+            exporter = OTLPSpanExporter(endpoint=endpoint)
         provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
     except ImportError:
