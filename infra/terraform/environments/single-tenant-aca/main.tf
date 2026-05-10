@@ -93,7 +93,7 @@ module "container_app_bff" {
 
 module "container_app_agent_execution" {
   source                        = "../../modules/container-app"
-  name                          = "${local.name_prefix}-agent-execution"
+  name                          = "${local.name_prefix}-agent"
   resource_group_name           = module.resource_group.name
   location                      = var.location
   container_apps_environment_id = module.container_apps_env.environment_id

@@ -337,9 +337,9 @@ jobs:
           subscription_id = "${AZURE_SUBSCRIPTION_ID}"
           tenant_id = "${AZURE_TENANT_ID}"
           resource_group_name = "${AZURE_RESOURCE_GROUP}"
-          bff_image = "${{ needs.build-publish.outputs.bff_image }}"
-          agent_execution_image = "${{ needs.build-publish.outputs.agent_execution_image }}"
-          mcp_image = "${{ needs.build-publish.outputs.mcp_image }}"
+          bff_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+          agent_execution_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+          mcp_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
           apim_sku_name = "Consumption_0"
           auth_issuer = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0"
           auth_jwks_url = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys"
@@ -384,13 +384,25 @@ jobs:
   app-rollout:
     name: Container/app rollout boundary
     runs-on: ubuntu-latest
-    needs: [preflight, azure-auth-deploy, build-publish, terraform-plan]
+    needs: [preflight, azure-auth-deploy, build-publish, protected-apply]
     if: ${{ inputs.run_app_rollout }}
     environment: lab-live-azure-deploy
     permissions:
       contents: read
       id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
     steps:
+      - name: Azure login (OIDC deploy identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
       - name: App rollout guardrails
         shell: bash
         run: |
@@ -399,10 +411,52 @@ jobs:
             echo "run_app_rollout=true but execute_live_mutations=false; app rollout stays dry-run-safe." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          {
-            echo "Scaffold app rollout command:"
-            echo "az containerapp update --name <agent-execution-app> --resource-group <rg-placeholder> --image <acr-login-server>/agent-execution:${{ inputs.image_tag }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          test -n "${AZURE_RESOURCE_GROUP}"
+
+      - name: Roll out protected service images
+        if: ${{ inputs.execute_live_mutations }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="$(printf '%s' "${AZURE_SUBSCRIPTION_ID}${AZURE_RESOURCE_GROUP}" | sha256sum | cut -c1-12)"
+          acr_name="ailab${suffix}"
+          acr_id="$(az acr show --name "${acr_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
+          login_server="$(az acr show --name "${acr_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query loginServer -o tsv)"
+
+          declare -A app_to_image=(
+            ["agent-identity-lab-dev-bff"]="${{ needs.build-publish.outputs.bff_image }}"
+            ["agent-identity-lab-dev-agent"]="${{ needs.build-publish.outputs.agent_execution_image }}"
+            ["agent-identity-lab-dev-mcp"]="${{ needs.build-publish.outputs.mcp_image }}"
+          )
+          declare -A app_to_identity=(
+            ["agent-identity-lab-dev-bff"]="agent-identity-lab-dev-id-bff"
+            ["agent-identity-lab-dev-agent"]="agent-identity-lab-dev-id-agent-execution"
+            ["agent-identity-lab-dev-mcp"]="agent-identity-lab-dev-id-mcp"
+          )
+
+          for app_name in "${!app_to_image[@]}"; do
+            identity_name="${app_to_identity[$app_name]}"
+            identity_id="$(az identity show --name "${identity_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
+            principal_id="$(az identity show --name "${identity_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query principalId -o tsv)"
+            az role assignment create \
+              --assignee-object-id "${principal_id}" \
+              --assignee-principal-type ServicePrincipal \
+              --role AcrPull \
+              --scope "${acr_id}" \
+              --output none 2>/dev/null || true
+            az containerapp registry set \
+              --name "${app_name}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --server "${login_server}" \
+              --identity "${identity_id}" \
+              --output none
+            az containerapp update \
+              --name "${app_name}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${app_to_image[$app_name]}" \
+              --output none
+          done
+          echo "Rolled out protected service images to ACA using managed identity AcrPull." >> "$GITHUB_STEP_SUMMARY"
 
   deploy-summary:
     name: Deploy summary
