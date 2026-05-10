@@ -15,6 +15,12 @@ variable "location" {
   default     = null
 }
 
+variable "log_analytics_workspace_id" {
+  type        = string
+  description = "Log Analytics workspace resource ID to link to this environment (optional)."
+  default     = null
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply when applicable."

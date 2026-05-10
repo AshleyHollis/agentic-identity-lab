@@ -1,0 +1,287 @@
+{
+  "spec_id": "008",
+  "slug": "live-azure-e2e-gate",
+  "milestone": "M8",
+  "phase": "closed",
+  "status": "complete",
+  "created": "2026-05-10",
+  "updated": "2026-05-10",
+  "requested_by": "Ashley Hollis",
+  "owners": {
+    "primary": [
+      "Tank",
+      "Neo",
+      "Mouse"
+    ],
+    "reviewers": [
+      "Morpheus",
+      "Trinity"
+    ]
+  },
+  "impact": "High",
+  "spec_gate_satisfied": true,
+  "implementation_blocked": false,
+  "implementation_blocked_reason": "None — M8 final closeout (T15) complete. Workflows remain opt-in scaffolds; no live Azure execution claimed in this session.",
+  "artifacts": {
+    "README.md": "complete",
+    "goals.md": "complete",
+    "research.md": "complete",
+    "requirements.md": "complete",
+    "design.md": "complete",
+    "tasks.md": "complete",
+    "state.json": "complete",
+    ".progress.md": "complete"
+  },
+  "adrs": {
+    "ADR-M8-01": {
+      "question": "What is the live Azure workflow boundary for a public repository?",
+      "owner": "Morpheus",
+      "status": "accepted",
+      "decision": "Option A -- live deployment and smoke workflows remain workflow_dispatch/protected-schedule only and never default public CI."
+    },
+    "ADR-M8-02": {
+      "question": "Should M8 deploy through GitHub Actions pipelines or primarily through manual CLI steps?",
+      "owner": "Tank",
+      "status": "ready-for-review",
+      "decision": "Option A -- pipeline-first deployment via GitHub Actions with OIDC and protected environments."
+    },
+    "ADR-M8-03": {
+      "question": "What low-cost operating model should M8 use for the lab environment?",
+      "owner": "Tank",
+      "status": "ready-for-review",
+      "decision": "Option A -- manual start/resume, nightly stop/scale-down, and optional manual destroy for non-stoppable expensive resources."
+    },
+    "ADR-M8-04": {
+      "question": "How should live trace verification and telemetry safety be enforced?",
+      "owner": "Trinity",
+      "status": "ready-for-review",
+      "decision": "Option A -- Azure Monitor/Application Insights verification with explicit no-token/no-PII telemetry constraints and saved positive/negative verification recipe."
+    }
+  },
+  "task_status": {
+    "T10": "accepted",
+    "T11": "accepted",
+    "T12": "accepted",
+    "T00": "complete",
+    "T01": "complete",
+    "T02": "complete",
+    "T03": "complete",
+    "T04": "complete",
+    "T05": "complete",
+    "T06": "optional-not-implemented-non-blocking",
+    "T07": "complete",
+    "T08": "complete",
+    "T09": "complete",
+    "T13": "accepted",
+    "T14": "accepted",
+    "T15": "complete"
+  },
+  "post_implementation_review": {
+    "morpheus_t13": {
+      "verdict": "ACCEPTED",
+      "date": "2026-05-10",
+      "summary": [
+        "Spec 008 required-path implementation matches the approved architecture and task graph for T03/T04/T05/T07/T08/T09, without making optional T06 destroy/recreate a required dependency.",
+        "Public CI remains validation-only, while live workflows stay protected/manual or protected schedule scoped with explicit OIDC identity separation and opt-in smoke execution.",
+        "Cost-control and operator docs remain aligned with the lifecycle model and avoid overclaiming stoppability for APIM or telemetry resources.",
+        "Agent Execution Service naming remains explicit and distinct from optional AKS Agent Gateway references, and state/progress do not claim live Azure smoke execution."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "validation": [
+        "python -c \"import json, pathlib; json.load(open(r'.squad\\\\specs\\\\008-live-azure-e2e-gate\\\\state.json', encoding='utf-8')); print('state.json OK'); import yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in pathlib.Path('.github\\\\workflows').glob('m8-*.yml')]; print('workflow yaml parse OK')\"",
+        "python tools\\\\ci\\\\public_safe_validation.py",
+        "python tools\\\\ci\\\\m8_browser_smoke_harness.py --mode static",
+        "python tools\\\\telemetry\\\\validate_m8_kql_contract.py",
+        "python tools\\\\ci\\\\m8_smoke_trace_contract.py validate --workflow-file .github\\\\workflows\\\\m8-smoke-trace.yml --positive-kql tools\\\\telemetry\\\\kql\\\\m8-positive-chain.kql --negative-kql tools\\\\telemetry\\\\kql\\\\m8-negative-leakage.kql"
+      ]
+    },
+    "trinity_t14": {
+      "verdict": "ACCEPTED",
+      "date": "2026-05-10",
+      "summary": [
+        "Focused re-review confirms T14-01 is resolved: m8-live-oidc-contract.yml no longer prints Azure tenant/subscription/account metadata and now uses non-disclosing Azure context checks only.",
+        "Focused re-review confirms T14-02 is resolved: m8-start-resume.yml still performs the readiness probe but suppresses the protected endpoint value in workflow-visible output.",
+        "Targeted searches found no equivalent workflow-visible account-metadata or endpoint-variable leakage patterns remaining in the reviewed M8 workflow family.",
+        "Offline/public-safe guards now cover the rejected patterns through tools/ci/public_safe_validation.py and regression coverage in tests/security/test_m8_public_safe_validation.py."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "validation": [
+        "python tools\\\\ci\\\\public_safe_validation.py",
+        "pytest tests\\\\security\\\\test_m8_public_safe_validation.py -q",
+        "python -c \"import json; json.load(open(r'.squad\\\\specs\\\\008-live-azure-e2e-gate\\\\state.json', encoding='utf-8')); print('state.json parse ok')\"",
+        "rg \"az\\\\s+account\\\\s+show|GITHUB_STEP_SUMMARY|M8_READINESS_URL|URL|URI|ENDPOINT|HOST\" .github\\\\workflows -g \"m8-*.yml\"",
+        "rg \"\\\\$\\\\{?[A-Z][A-Z0-9_]*(URL|URI|ENDPOINT|HOST)[A-Z0-9_]*\\\\}?\" .github\\\\workflows tools\\\\ci tests\\\\security -g \"**/*.{yml,py}\""
+      ]
+    },
+    "neo_t14_static_gate_remediation": {
+      "verdict": "ACCEPTED_IN_T14_RE_REVIEW",
+      "date": "2026-05-10",
+      "summary": [
+        "Submitted static-gate remediation for Trinity T14 rejection coverage gaps.",
+        "Extended tools/ci/public_safe_validation.py to detect az account show metadata logging and endpoint-variable output to workflow summary/plain logs.",
+        "Added fixture-based regression tests in tests/security/test_m8_public_safe_validation.py covering both rejected patterns and safe replacements.",
+        "Trinity re-review accepted this remediation as sufficient coverage for the rejected exposure patterns."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "validation": [
+        "python tools\\\\ci\\\\public_safe_validation.py",
+        "python -m pytest -q tests\\\\security\\\\test_m8_public_safe_validation.py tests\\\\security\\\\test_m8_validation_gates.py",
+        "python -c \"import json; json.load(open(r'.squad\\\\specs\\\\008-live-azure-e2e-gate\\\\state.json', encoding='utf-8')); print('state.json OK')\""
+      ]
+    },
+    "tank_t14_workflow_remediation": {
+      "verdict": "ACCEPTED_IN_T14_RE_REVIEW",
+      "date": "2026-05-10",
+      "summary": [
+        "Submitted workflow-output remediation for Trinity T14 blockers.",
+        "Replaced `az account show --output table` with non-disclosing checks (`az --version` and `az account show --output none`) in all m8-live-oidc-contract identity contract jobs.",
+        "Removed readiness endpoint value echo from m8-start-resume step summary and replaced with a non-disclosing readiness pass message.",
+        "Trinity re-review accepted this remediation as resolving the workflow-visible output blockers."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "validation": [
+        "python -c \"import pathlib,yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in pathlib.Path('.github\\\\workflows').glob('m8-*.yml')]; print('workflow yaml parse OK')\"",
+        "python tools\\\\ci\\\\public_safe_validation.py",
+        "python -c \"import pathlib,re,sys; files=list(pathlib.Path('.github\\\\workflows').glob('m8-*.yml')); patterns=[r'az\\\\s+account\\\\s+show\\\\s+--output\\\\s+table', r'Readiness probe passed for \\\\$\\{M8_READINESS_URL\\}']; bad=[]; [bad.append(f'{p}:matched {pat}') for p in files for pat in patterns if re.search(pat,p.read_text(encoding='utf-8'),re.I)]; print('workflow exposure scan OK' if not bad else '\\\\n'.join(bad)); sys.exit(1 if bad else 0)\"",
+        "python -c \"import json; json.load(open(r'.squad\\\\specs\\\\008-live-azure-e2e-gate\\\\state.json', encoding='utf-8')); print('state.json OK')\""
+      ]
+    },
+    "tank_t15_closeout": {
+      "verdict": "COMPLETE",
+      "date": "2026-05-10",
+      "summary": [
+        "Final closeout completed after T13 and T14 accepted.",
+        "Task status reconciliation recorded required-path completion and optional T06 non-blocking/not-implemented posture.",
+        "Spec phase/status moved to closed/complete and milestone documentation updated for M8 closeout.",
+        "No live Azure workflow execution or smoke evidence is claimed in this closeout session."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "validation": [
+        "state.json parse",
+        "python tools/ci/public_safe_validation.py",
+        "python tools/telemetry/validate_m8_kql_contract.py",
+        "python -m pytest -q tests/security/test_m8_public_safe_validation.py",
+        "static GUID/secret/token scan over m8 workflows"
+      ]
+    }
+  },
+  "live_azure_gate": {
+    "status": "scaffold-complete-opt-in",
+    "opt_in_flag": "LIVE_AZURE_TESTS=true",
+    "ci_default": false,
+    "pipeline_only_objective": true,
+    "private_environment_required": true,
+    "canonical_browser_driver": "spa-public-client",
+    "session_live_execution": "not-executed",
+    "session_live_evidence": "none"
+  },
+  "validation_commands": [
+    "python -c \"import json; json.load(open(r'.squad\\specs\\008-live-azure-e2e-gate\\state.json', encoding='utf-8')); print('state.json OK')\"",
+    "python -m pytest -q",
+    "python -c \"import pathlib,yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in pathlib.Path('.github\\\\workflows').glob('m8-*.yml')]; print('workflow yaml parse OK')\"",
+    "python -c \"import pathlib,re,sys; files=[pathlib.Path('.github\\\\workflows\\\\m8-live-oidc-contract.yml'),pathlib.Path('.github\\\\workflows\\\\m8-deploy-live.yml'),pathlib.Path('.github\\\\workflows\\\\m8-start-resume.yml'),pathlib.Path('.github\\\\workflows\\\\m8-nightly-shutdown.yml')]; g=re.compile(r'\\\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\\\b',re.I); j=re.compile(r'\\\\beyJ[A-Za-z0-9_-]{10,}\\\\.[A-Za-z0-9_-]{10,}\\\\.[A-Za-z0-9_-]{10,}\\\\b'); bad=[]; [bad.append(f'{p}:guid:{m}') for p in files for m in g.findall(p.read_text(encoding='utf-8')) if m.lower()!='00000000-0000-0000-0000-000000000000']; [bad.append(f'{p}:jwt') for p in files if j.search(p.read_text(encoding='utf-8'))]; print('public-safe scan OK' if not bad else '\\\\n'.join(bad)); sys.exit(1 if bad else 0)\"",
+    "python -c \"import pathlib,re,sys; t=pathlib.Path('.github\\\\workflows\\\\m8-nightly-shutdown.yml').read_text(encoding='utf-8'); pats=[r'terraform\\\\s+destroy',r'az\\\\s+group\\\\s+delete',r'az\\\\s+resource\\\\s+delete',r'az\\\\s+containerapp\\\\s+delete']; hit=[p for p in pats if re.search(p,t,re.I)]; print('scheduled shutdown destructive scan OK' if not hit else '\\\\n'.join(hit)); sys.exit(1 if hit else 0)\"",
+    "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+    "python tools\\telemetry\\validate_m8_kql_contract.py",
+    "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql"
+  ],
+  "dependencies": {
+    "blocking": [
+      "006-azure-deployment-baseline",
+      "007-variant-client-implementations"
+    ],
+    "notes": "M8 depends on M6 deployment scaffolding, M7 browser clients, and a private Azure/GitHub environment with live secrets kept outside the repository."
+  },
+  "pre_implementation_reviews": {
+    "T10": {
+      "owner": "Tank",
+      "verdict": "ACCEPTED",
+      "date": "2026-05-10",
+      "remediation_status": "accepted",
+      "summary": [
+        "The proposed workflow family remains implementable in principle and preserves the protected OIDC/live-smoke gating model.",
+        "Azure Container Apps remains the default deployment target and the cost-control matrix avoids overclaiming stoppability for telemetry resources.",
+        "The prior re-review blocker was the optional-T06 gate reintroduced via broad T13/T14 dependency ranges.",
+        "Neo's second remediation rewrites T13/T14/T15 dependencies so required closeout and review paths no longer depend on optional T06 unless T06 is explicitly implemented.",
+        "Destroy remains optional/non-blocking, and the required nightly shutdown plus manual start/resume path remains intact and implementable."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "remediation_notes": [
+        "design.md now marks m8-destroy.yml as optional/non-blocking for M8 closeout unless T06 is explicitly implemented.",
+        "tasks.md now keeps required docs/closeout on a path that does not depend on optional T06.",
+        "Neo rewrote tasks.md so T13/T14 use explicit required dependencies (T03, T04, T05, T07, T08, T09) and conditionally include T06 only if implemented.",
+        "Neo updated T15 dependencies to keep T06 conditional/non-blocking unless explicitly in scope.",
+        "Focused Tank re-review confirmed no remaining broad T03–T09 dependency ranges in required closeout/review paths and found the task graph implementable."
+      ]
+    },
+    "T11": {
+      "owner": "Morpheus",
+      "verdict": "ACCEPTED",
+      "date": "2026-05-10",
+      "summary": [
+        "M8 scope remains opt-in live Azure E2E only; public CI stays validation-only.",
+        "The browser -> APIM -> BFF -> Agent Execution Service -> MCP path is explicit and aligned with roadmap/current focus.",
+        "The pipeline-first deploy, start/resume, shutdown, and smoke/trace workflow family matches prior milestone patterns.",
+        "Cost-control and nightly shutdown expectations are prominent and traceable to Ashley's directive.",
+        "Agent Execution Service terminology is consistent and distinct from optional AKS Agent Gateway references."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null
+    },
+    "T12": {
+      "owner": "Trinity",
+      "verdict": "ACCEPTED",
+      "date": "2026-05-10",
+      "summary": [
+        "The original OIDC blocker is resolved: purpose-scoped OIDC identity separation is now binding, shutdown/start-resume scope is explicitly stop/start/scale-only, and deploy/smoke remain behind protected-environment approval boundaries.",
+        "The original telemetry blocker is resolved: the KQL verification contract is now implementation-binding across requests, dependencies, traces, and logs, with explicit bans on raw tokens, Authorization values, oid, sub, email, upn, preferred_username, and unsafe tracestate.",
+        "Other T12 conditions remain satisfied at planning level: public CI remains validation-only, delegated APIM -> BFF -> Agent Execution Service -> MCP boundaries are preserved, shutdown remains scoped/idempotent/non-destructive by default, and required negative/static scan coverage is specified."
+      ],
+      "blocking_findings": [],
+      "recommended_revision_owner": null,
+      "remediation_status": "accepted",
+      "remediation_notes": [
+        "Tank updated requirements.md/design.md/tasks.md to make purpose-scoped OIDC principal separation and least-privilege RBAC binding, with explicit shutdown identity stop/start/scale scope and no broad deploy/apply/destroy rights.",
+        "Tank updated spec acceptance/static-check expectations so workflow principal separation and RBAC scope documentation are required for implementation.",
+        "Neo updated design.md/tasks.md to replace illustrative telemetry KQL with a binding contract covering requests/dependencies/traces/logs, explicit token/PII/tracestate bans, and workflow hard-fail behavior on leakage findings.",
+        "Focused Trinity re-review validated the updated wording and offline telemetry test coverage; no new T12 blockers were found."
+      ]
+    }
+  },
+  "notes": [
+    "Spec 008 remains planning-only and does not authorize live Azure changes in this revision.",
+    "M8 remains opt-in and is not part of default public CI.",
+    "Tank cost-control guidance and Trinity security guardrails are consolidated into the spec artifacts.",
+    "The pre-implementation review gate is now satisfied: T10, T11, and T12 are all accepted.",
+    "Tank submitted the first T10 remediation; re-review found the destroy-scope issue fixed but a remaining T13/T14 dependency contradiction.",
+    "All names and identifiers in the spec remain public-safe placeholders.",
+    "2026-05-10 — T10 deployment review rejected by Tank. Blocking revisions required before implementation handoff.",
+    "2026-05-10 — T10 remediation submitted by Tank and is pending re-review; verdict remains unaccepted until reviewer confirmation.",
+    "2026-05-10 — T10 re-review by Tank remained REJECTED. Destroy-path scope is clear, but tasks.md still let optional T06 gate T13/T14/T15 through 'T03–T09' dependencies. Recommended revision owner: Neo; Tank remains locked out on this artifact per reviewer protocol.",
+    "2026-05-10 — Neo submitted a second T10 remediation updating tasks.md to replace broad 'T03–T09' dependency ranges in T13/T14 with explicit required dependencies that exclude optional T06 unless implemented, and to keep T15 closeout non-blocking for T06 unless explicitly in scope. T10 status is pending Tank re-review.",
+    "2026-05-10 — Tank accepted the focused T10 re-review. Required M8 review/docs/closeout paths no longer depend on optional T06, destroy remains optional/non-blocking, and the nightly shutdown plus manual start/resume path remains intact and implementable.",
+    "2026-05-10 — T11 architecture review accepted by Morpheus. No blocking architecture revisions required; T10 and T12 still gate implementation start.",
+    "2026-05-10 — T12 security review rejected by Trinity. Required revisions: Tank must make purpose-scoped OIDC/shutdown permissions binding in design.md, and Neo must tighten the telemetry/KQL leakage contract so all required log surfaces and tracestate handling are explicit before re-review.",
+    "2026-05-10 — Tank submitted T12-01 OIDC/shutdown identity remediation; status was pending Trinity re-review until acceptance.",
+    "2026-05-10 — Neo submitted T12-02 telemetry/KQL remediation; status was pending Trinity re-review until acceptance.",
+    "2026-05-10 — Trinity accepted T12 after focused re-review. The purpose-scoped OIDC/shutdown least-privilege language is now binding, and the telemetry/KQL leakage contract is now implementation-binding across requests/dependencies/traces/logs with explicit token/PII/tracestate bans and hard-fail behavior.",
+    "2026-05-10 — T00 implementation kickoff package completed. implementation-plan.md now defines final M8 workflow/job/input-output/handoff contract, lifecycle matrix, OIDC boundary, and public-safe placeholders for downstream implementation tasks.",
+    "2026-05-10 — T01/T04/T05 implemented with public-safe workflow scaffolds: m8-live-oidc-contract.yml, m8-start-resume.yml, and m8-nightly-shutdown.yml. Workflows use protected environments + OIDC placeholder secrets only, keep scheduled shutdown non-destructive, and classify resource actions as stopped/scaled_to_zero/left_running/destroy_only/manual_follow_up_required.",
+    "2026-05-10 — T02 completed by extending validation-only CI guardrails: added Terraform init/validate for infra/terraform/environments/single-tenant-aca in .github/workflows/ci.yml, centralized public-safe workflow/identifier/telemetry policy checks in tools/ci/public_safe_validation.py, and added static test coverage in tests/security/test_m8_public_safe_validation.py.",
+    "2026-05-10 — T03 completed by adding protected manual deploy-live scaffold .github/workflows/m8-deploy-live.yml with workflow_dispatch-only trigger, protected OIDC job boundaries, dry-run-safe IaC/config/image/app rollout stages by default, and smoke gate enabled only when live_azure_tests input is true in protected manual scope.",
+    "2026-05-10 — T07 completed with canonical protected smoke+trace scaffold (.github/workflows/m8-smoke-trace.yml), static browser wiring harness, and hard-fail trace leakage contract wiring (no live Azure execution in public CI).",
+    "2026-05-10 — T08 completed by strengthening public-safe workflow policy checks, identity/RBAC boundary scans, artifact hygiene gates, and token/PII/tracestate contract validation with versioned KQL artifacts and offline regression tests.",
+    "2026-05-10 — T09 completed by adding an operator runbook at docs/deployment/aca/m8-operator-guide.md and linking deployment docs with explicit protected workflow sequence, resource-type cost behavior, RBAC boundaries, optional destroy/recreate guidance, and safe smoke/trace plus KQL leakage invocation rules. Validation passed for public_safe_validation.py, validate_m8_kql_contract.py, m8_smoke_trace_contract.py validate, and state.json parsing; updated docs remained placeholder-safe with no real IDs/secrets/tokens.",
+    "2026-05-10 — T13 implementation conformance review accepted by Morpheus. Required-path implementation matches Spec 008 architecture/task graph, public CI remains validation-only, optional T06 destroy/recreate does not gate required closeout, workflow family and cost-control docs are coherent, and no live Azure execution is claimed.",
+    "2026-05-10 — T14 implementation security review rejected by Trinity. Blocking revisions required: remove workflow-visible output that reveals protected-environment account/endpoint metadata (`az account show --output table` in m8-live-oidc-contract.yml and `${M8_READINESS_URL}` in m8-start-resume.yml step summary) and extend offline validation/tests so those exposure patterns are caught before re-review.",
+    "2026-05-10 — Neo submitted T14 static-gate remediation for re-review: tools/ci/public_safe_validation.py now detects az account metadata log dumping and endpoint-variable output to workflow summary/plain logs; tests/security/test_m8_public_safe_validation.py adds fixture-based regression coverage for rejected patterns and safe replacements. T14 remains pending Trinity re-review and is not accepted in this revision.",
+    "2026-05-10 — Tank submitted T14 workflow-output remediation for re-review: m8-live-oidc-contract.yml now uses non-disclosing Azure context checks (`az --version` and `az account show --output none`), and m8-start-resume.yml suppresses readiness endpoint values in step summary output. T14 remains pending Trinity re-review and is not accepted in this revision.",
+    "2026-05-10 — T15 final closeout completed by Tank. Spec 008 closed with phase=closed/status=complete; required-path tasks reconciled complete/accepted; T06 recorded optional-not-implemented-non-blocking; roadmap/current-focus updated; final static/public-safe validations passed. No live Azure execution was run or claimed in this session."
+  ]
+}

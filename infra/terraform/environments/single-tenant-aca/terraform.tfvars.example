@@ -1,0 +1,18 @@
+# Placeholder values only — replace before deployment.
+# Do NOT commit real tenant IDs, subscription IDs, or secrets.
+# Supply these values via tfvars at deploy time (not committed to this repository).
+
+environment         = "dev"
+location            = "eastus"
+subscription_id     = "{subscription-id}"
+tenant_id           = "{tenant-id}"
+resource_group_name = "rg-agent-identity-lab-dev-aca"
+
+# Container images — set to real ACR image refs at deploy time.
+# bff_image             = "acrname.azurecr.io/bff:latest"
+# agent_execution_image = "acrname.azurecr.io/agent-execution:latest"
+# mcp_image             = "acrname.azurecr.io/mcp-protected-api:latest"
+
+# Azure Monitor OTLP endpoint (ADR-M6-02).
+# Replace {region} with your Azure Monitor workspace region (e.g., eastus).
+# otel_endpoint = "https://{region}.otel.monitor.azure.com/v1/traces"

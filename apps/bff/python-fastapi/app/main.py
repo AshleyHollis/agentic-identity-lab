@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from identity_lab_diagnostics import get_correlation_id
 
@@ -37,9 +38,15 @@ if _cors_origins:
         allow_origins=_cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST"],
-        allow_headers=["Authorization", "Content-Type", "x-correlation-id"],
+        allow_headers=["Authorization", "Content-Type", "x-correlation-id", "traceparent"],
     )
 # If _cors_origins is empty, CORS middleware is not registered.
+
+
+class ChatSessionRequest(BaseModel):
+    # display_name is display/context only. Identity is established solely by the
+    # validated bearer token. Never use display_name for authorization decisions.
+    display_name: str | None = Field(default=None, max_length=255)
 
 
 @app.middleware("http")
@@ -57,13 +64,17 @@ async def _trace_identity_lab_auth(request: Request, call_next):
 
 @app.get("/healthz")
 def healthz(request: Request) -> dict[str, str]:
-    correlation_id = get_correlation_id(request.headers)
+    correlation_id = get_correlation_id(
+        request.headers, header_name=settings.correlation_header
+    )
     return build_health_payload(settings, correlation_id)
 
 
 @app.get("/readyz")
 def readyz(request: Request) -> dict[str, str]:
-    correlation_id = get_correlation_id(request.headers)
+    correlation_id = get_correlation_id(
+        request.headers, header_name=settings.correlation_header
+    )
     return build_ready_payload(settings, correlation_id)
 
 
@@ -97,11 +108,13 @@ def debug_claims(auth_context: AuthContext = Depends(get_auth_context)) -> dict[
 
 @app.post("/chat/session")
 def create_chat_session(
+    request_body: ChatSessionRequest | None = None,
     auth_context: AuthContext = Depends(get_auth_context),
 ) -> dict[str, str]:
     # userId from token claims (sub, oid, preferred_username) is a display hint ONLY.
     # It MUST NOT be used as an authorization gate, database key, or downstream trust signal.
     # Session authorization is based solely on aud, scp, tid, and iss validation.
+    _ = request_body
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     return {

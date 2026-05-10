@@ -1,0 +1,11 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "isCreatingSolution": true,
+    "version": "1.19.0",
+    "libraryName": "identity-chat-webpart",
+    "libraryId": "00000000-0000-0000-0000-000000000000",
+    "environment": "spo",
+    "packageManager": "npm",
+    "componentType": "webpart"
+  }
+}

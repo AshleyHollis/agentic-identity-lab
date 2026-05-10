@@ -1,0 +1,121 @@
+name: M8 Start/Resume (Protected)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_slug:
+        description: "Placeholder environment selector (example: agentidlab-live)"
+        required: true
+        default: "agentidlab-live"
+      run_readiness_probe:
+        description: "Run optional HTTP readiness probe"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m8-start-resume-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  start_resume:
+    name: Start/Resume lab resources
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-ops
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_SHUTDOWN }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      APIM_RESOURCE_GROUP: ${{ vars.APIM_RESOURCE_GROUP }}
+      ACA_APP_NAMES: ${{ vars.ACA_APP_NAMES }}
+      APIM_SERVICE_NAME: ${{ vars.APIM_SERVICE_NAME }}
+      M8_READINESS_URL: ${{ vars.M8_READINESS_URL }}
+    steps:
+      - name: Preflight contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AZURE_CLIENT_ID}"
+          test -n "${AZURE_TENANT_ID}"
+          test -n "${AZURE_SUBSCRIPTION_ID}"
+          test -n "${AZURE_RESOURCE_GROUP}"
+          test -n "${ACA_APP_NAMES}"
+          python tools/ci/m9_live_preflight.py \
+            --context lifecycle-identity \
+            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP ACA_APP_NAMES
+
+      - name: Azure login (OIDC lifecycle identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resume ACA apps (idempotent)
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra APPS <<< "${ACA_APP_NAMES}"
+          : > m8-start-resume-summary.csv
+          echo "resource_type,resource_name,classification,notes" >> m8-start-resume-summary.csv
+          for app in "${APPS[@]}"; do
+            app_trimmed="$(echo "${app}" | xargs)"
+            if [[ -z "${app_trimmed}" ]]; then
+              continue
+            fi
+            current_min="$(az containerapp show --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --query "properties.template.scale.minReplicas" -o tsv || echo "")"
+            if [[ -z "${current_min}" || "${current_min}" == "0" ]]; then
+              az containerapp update --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --min-replicas 1 --output none
+              echo "aca,${app_trimmed},started,minReplicas set to 1" >> m8-start-resume-summary.csv
+            else
+              echo "aca,${app_trimmed},already_running,minReplicas=${current_min}" >> m8-start-resume-summary.csv
+            fi
+          done
+
+      - name: APIM posture classification (non-mutating)
+        shell: bash
+        run: |
+          set -euo pipefail
+          apim_rg="${APIM_RESOURCE_GROUP:-${AZURE_RESOURCE_GROUP}}"
+          if [[ -n "${APIM_SERVICE_NAME}" ]]; then
+            sku="$(az apim show --name "${APIM_SERVICE_NAME}" --resource-group "${apim_rg}" --query "sku.name" -o tsv || echo "unknown")"
+            echo "apim,${APIM_SERVICE_NAME},left_running,apim sku=${sku}; explicit stop/start not assumed for all tiers" >> m8-start-resume-summary.csv
+          else
+            echo "apim,<unset>,manual_follow_up_required,APIM_SERVICE_NAME was not configured" >> m8-start-resume-summary.csv
+          fi
+          echo "log_analytics,<workspace>,left_running,telemetry resources are not stoppable in start/resume path" >> m8-start-resume-summary.csv
+          echo "app_insights,<application-insights>,left_running,telemetry resources are not stoppable in start/resume path" >> m8-start-resume-summary.csv
+          echo "resource_group,<environment>,destroy_only,manual destroy workflow only; not part of start/resume" >> m8-start-resume-summary.csv
+
+      - name: Verify readiness
+        if: ${{ inputs.run_readiness_probe }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${M8_READINESS_URL}" ]]; then
+            echo "M8_READINESS_URL not configured; readiness probe skipped by policy." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 5 --retry-delay 10 "${M8_READINESS_URL}" > /dev/null
+          echo "Readiness probe passed (endpoint value suppressed)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish action summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### M8 start/resume action summary"
+            echo ""
+            echo "| Resource type | Resource name | Classification | Notes |"
+            echo "|---|---|---|---|"
+            tail -n +2 m8-start-resume-summary.csv | while IFS=',' read -r rtype rname classification notes; do
+              echo "| ${rtype} | ${rname} | ${classification} | ${notes} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,4 @@
+{
+  "bffBaseUrl": "http://localhost:8000",
+  "bffResourceUri": "api://{client-id}"
+}

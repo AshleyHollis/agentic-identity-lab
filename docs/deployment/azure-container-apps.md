@@ -45,3 +45,56 @@ Leave `OTEL_EXPORTER_OTLP_ENDPOINT` unset to activate the no-op tracer in offlin
 - Use managed identity for runtime access (Key Vault, ACR, APIM).
 - `AUTH_MODE` must be set to `strict` in all ACA container apps (not a variable — hardcoded
   per T03 design note).  `AUTH_MODE=mock` is unconditionally blocked in the deployment overlay.
+
+## M8 protected live-operations workflow scaffolds
+
+The repository now includes public-safe M8 workflow scaffolds:
+
+- `.github/workflows/m8-live-oidc-contract.yml` (T01 contract)
+- `.github/workflows/m8-deploy-live.yml` (T03)
+- `.github/workflows/m8-start-resume.yml` (T04)
+- `.github/workflows/m8-nightly-shutdown.yml` (T05)
+- `.github/workflows/m8-smoke-trace.yml` (T07 canonical browser smoke + trace)
+
+These workflows are `workflow_dispatch` and/or `schedule` only, run in protected GitHub
+Environments, and use OIDC with placeholder secret names:
+
+- `AZURE_CLIENT_ID_DEPLOY`
+- `AZURE_CLIENT_ID_SMOKE`
+- `AZURE_CLIENT_ID_SHUTDOWN`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+Purpose-scoped principal contract:
+
+- deploy identity: deploy/apply only
+- smoke identity: smoke/trace verification only
+- lifecycle identity: start/resume and shutdown only
+- deploy-live smoke stage is gated by `live_azure_tests=true` input and restricted to protected manual workflow scope only
+
+### Canonical smoke + trace contract scaffold (T07)
+
+- Browser smoke wiring is validated by `tools/ci/m8_browser_smoke_harness.py` (`static` mode, no live endpoint calls).
+- Trace contract wiring is validated by:
+  - `tools/telemetry/validate_m8_kql_contract.py`
+  - `tools/ci/m8_smoke_trace_contract.py validate`
+- Live Azure Monitor evaluation is represented (opt-in only) by:
+  - `tools/ci/m8_smoke_trace_contract.py evaluate --positive-results-json ... --negative-results-json ...`
+  - any non-zero leakage row count hard-fails the workflow.
+
+The lifecycle identity must not have broad deploy/apply/destroy permissions and should be
+scoped to the lab resource group (or narrower), without subscription Owner.
+
+## M8 operator runbook (T09)
+
+For day-2 operator guidance, see:
+
+- `docs/deployment/aca/m8-operator-guide.md`
+
+It documents:
+
+- safe deploy/start-resume/smoke/nightly operating sequence
+- what scales to zero vs what remains billable (ACA/APIM/Log Analytics/App Insights/ACR/managed identities)
+- protected environment + least-privilege RBAC boundaries for deploy/smoke/shutdown identities
+- optional AKS Agent Gateway future-path posture (explicitly non-default for M8)
+- optional destroy/recreate implications if T06 is implemented later

@@ -43,13 +43,17 @@ class AuthorizationCheckResponse(BaseModel):
 
 @app.get("/healthz")
 def healthz(request: Request) -> dict[str, str]:
-    correlation_id = get_correlation_id(request.headers)
+    correlation_id = get_correlation_id(
+        request.headers, header_name=settings.correlation_header
+    )
     return build_health_payload(settings, correlation_id)
 
 
 @app.get("/readyz")
 def readyz(request: Request) -> dict[str, str]:
-    correlation_id = get_correlation_id(request.headers)
+    correlation_id = get_correlation_id(
+        request.headers, header_name=settings.correlation_header
+    )
     return build_ready_payload(settings, correlation_id)
 
 

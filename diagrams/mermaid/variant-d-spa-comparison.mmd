@@ -1,16 +1,33 @@
-flowchart LR
-  User((User)) --> Entra[Entra ID]
+sequenceDiagram
+  autonumber
+  participant User as User
+  participant SPA as React/Vite Public Client
+  participant MSAL as MSAL (PKCE)
+  participant Entra as Microsoft Entra ID
+  participant BFF as BFF (/chat/session)
+  participant AES as Agent Execution Service
+  participant MCP as MCP Protected API
 
-  subgraph SPA_Only[SPA-only]
-    SPA[SPA Client] -->|Delegated token stored in browser| APIA1[API A]
-    APIA1 -->|OBO token (aud: API B)| APIB1[API B]
+  User->>SPA: Open app and start chat
+  SPA->>MSAL: acquireTokenSilent(scopes)
+  alt Cached token available
+    MSAL-->>SPA: Access token (sessionStorage cache)
+  else Interaction required
+    SPA->>MSAL: acquireTokenPopup(scopes)
+    MSAL->>Entra: Auth code + PKCE challenge
+    Entra-->>MSAL: Authorization code
+    MSAL->>Entra: Token exchange + PKCE verifier
+    Entra-->>MSAL: Delegated access token
+    MSAL-->>SPA: Access token
   end
-
-  subgraph BFF_Assisted[BFF-assisted]
-    Web[Web App] -->|Session| BFF[BFF]
-    BFF -->|Delegated token (aud: API A)| APIA2[API A]
-    APIA2 -->|OBO token (aud: API B)| APIB2[API B]
-  end
-
-  Entra -->|Delegated token| SPA
-  Entra -->|Auth code| Web
+  SPA->>SPA: Generate traceparent
+  SPA->>BFF: POST /chat/session<br/>Authorization: Bearer {token}<br/>traceparent + {display_name?}
+  Note over SPA,BFF: userId/display_name is display-only context, never identity
+  Note over SPA,BFF: M7 clients call BFF only (no direct call to Agent Execution Service)
+  BFF->>BFF: Validate bearer token (identity source)
+  BFF->>AES: Forward request + traceparent
+  AES->>MCP: OBO call + traceparent
+  MCP-->>AES: Response
+  AES-->>BFF: Session payload
+  BFF-->>SPA: {session_id, expires_at}
+  SPA-->>User: Session ready

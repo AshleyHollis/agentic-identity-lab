@@ -1,0 +1,126 @@
+name: M8 Live OIDC Contract (Protected)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_slug:
+        description: "Placeholder environment selector (example: agentidlab-live)"
+        required: true
+        default: "agentidlab-live"
+      run_read_only_azure_check:
+        description: "Run read-only az account check after OIDC login"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-identity-contract:
+    name: Deploy identity contract
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate protected environment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.environment_slug }}"
+          test -n "${{ secrets.AZURE_CLIENT_ID_DEPLOY }}"
+          test -n "${{ secrets.AZURE_TENANT_ID }}"
+          test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Azure login (OIDC deploy identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read-only Azure context check
+        if: ${{ inputs.run_read_only_azure_check }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          az --version > /dev/null
+          az account show --output none
+
+  smoke-identity-contract:
+    name: Smoke identity contract
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-smoke
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate protected environment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.environment_slug }}"
+          test -n "${{ secrets.AZURE_CLIENT_ID_SMOKE }}"
+          test -n "${{ secrets.AZURE_TENANT_ID }}"
+          test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Azure login (OIDC smoke identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_SMOKE }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read-only Azure context check
+        if: ${{ inputs.run_read_only_azure_check }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          az --version > /dev/null
+          az account show --output none
+
+  lifecycle-identity-contract:
+    name: Shutdown/start identity contract
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-ops
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate protected environment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.environment_slug }}"
+          test -n "${{ secrets.AZURE_CLIENT_ID_SHUTDOWN }}"
+          test -n "${{ secrets.AZURE_TENANT_ID }}"
+          test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Azure login (OIDC shutdown/start identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID_SHUTDOWN }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read-only Azure context check
+        if: ${{ inputs.run_read_only_azure_check }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          az --version > /dev/null
+          az account show --output none
+
+      - name: Contract scope summary
+        shell: bash
+        run: |
+          {
+            echo "### M8 OIDC principal contract"
+            echo ""
+            echo "- deploy identity: OIDC only, used by protected deploy workflows"
+            echo "- smoke identity: OIDC only, used by protected smoke/trace workflows"
+            echo "- lifecycle identity: OIDC only, used by start/resume and nightly shutdown workflows"
+            echo "- lifecycle identity must not be granted broad deploy/apply/destroy rights"
+          } >> "$GITHUB_STEP_SUMMARY"

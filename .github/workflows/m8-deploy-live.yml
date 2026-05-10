@@ -1,0 +1,314 @@
+name: M8 Deploy Live (Protected Manual Scaffold)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_slug:
+        description: "Placeholder environment selector (example: agentidlab-live)"
+        required: true
+        default: "agentidlab-live"
+      image_tag:
+        description: "Container image tag placeholder (example: m8-manual-001)"
+        required: true
+        default: "m8-manual-001"
+      publish_image:
+        description: "Enable image publish boundary stage"
+        required: false
+        default: false
+        type: boolean
+      run_apply:
+        description: "Enable protected IaC apply boundary stage"
+        required: false
+        default: false
+        type: boolean
+      run_config_rollout:
+        description: "Enable protected config rollout boundary stage"
+        required: false
+        default: false
+        type: boolean
+      run_app_rollout:
+        description: "Enable protected app rollout boundary stage"
+        required: false
+        default: false
+        type: boolean
+      execute_live_mutations:
+        description: "Allow mutating az/terraform commands in protected stages"
+        required: false
+        default: false
+        type: boolean
+      confirm_live_phrase:
+        description: "Required phrase for protected mutation stages"
+        required: false
+        default: ""
+      live_azure_tests:
+        description: "Enable smoke stage after deploy boundaries"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m8-deploy-live-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Preflight contract checks
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_label: ${{ steps.meta.outputs.deployment_label }}
+    steps:
+      - name: Validate dispatch inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.environment_slug }}"
+          test -n "${{ inputs.image_tag }}"
+          if [[ "${{ inputs.run_apply }}" == "true" || "${{ inputs.run_config_rollout }}" == "true" || "${{ inputs.run_app_rollout }}" == "true" ]]; then
+            if [[ "${{ inputs.confirm_live_phrase }}" != "APPROVE_M8_LIVE_MUTATION" ]]; then
+              echo "Protected mutation stages require confirm_live_phrase=APPROVE_M8_LIVE_MUTATION."
+              exit 1
+            fi
+          fi
+      - name: Set deployment metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          label="${{ inputs.environment_slug }}-${{ github.run_number }}"
+          echo "deployment_label=${label}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### M8 deploy-live preflight"
+            echo ""
+            echo "- deployment_label: ${label}"
+            echo "- environment_slug: ${{ inputs.environment_slug }}"
+            echo "- image_tag: ${{ inputs.image_tag }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  azure-auth-deploy:
+    name: Azure auth (deploy identity)
+    runs-on: ubuntu-latest
+    needs: preflight
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy identity placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AZURE_CLIENT_ID}"
+          test -n "${AZURE_TENANT_ID}"
+          test -n "${AZURE_SUBSCRIPTION_ID}"
+          python tools/ci/m9_live_preflight.py \
+            --context deploy-identity \
+            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID
+
+      - name: Azure login (OIDC deploy identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: OIDC boundary summary
+        shell: bash
+        run: |
+          {
+            echo "### OIDC deploy identity boundary"
+            echo ""
+            echo "- Deploy identity is protected-environment scoped."
+            echo "- APIM preserves inbound Authorization to BFF."
+            echo "- Agent Execution Service remains the only OBO boundary."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-publish:
+    name: Build/publish image boundary
+    runs-on: ubuntu-latest
+    needs: [preflight, azure-auth-deploy]
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dry-run-safe image stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.publish_image }}" != "true" ]]; then
+            {
+              echo "publish_image=false; image push not attempted."
+              echo "Scaffold command:"
+              echo "docker build -t <acr-login-server>/agent-execution:${{ inputs.image_tag }} apps/agent-execution/python-fastapi-agent-framework"
+              echo "docker push <acr-login-server>/agent-execution:${{ inputs.image_tag }}"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ "${{ inputs.execute_live_mutations }}" != "true" ]]; then
+            echo "publish_image=true but execute_live_mutations=false; keeping stage dry-run-safe." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Replace with protected image build/push commands for private environment execution." >> "$GITHUB_STEP_SUMMARY"
+
+  terraform-plan:
+    name: Terraform plan boundary
+    runs-on: ubuntu-latest
+    needs: [preflight, azure-auth-deploy]
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform init/validate/plan (scaffold)
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=infra/terraform/environments/single-tenant-aca init -backend=false
+          terraform -chdir=infra/terraform/environments/single-tenant-aca validate
+          terraform -chdir=infra/terraform/environments/single-tenant-aca plan \
+            -refresh=false \
+            -lock=false \
+            -input=false \
+            -no-color \
+            -var-file=terraform.tfvars.example \
+            -out=m8-deploy-live.tfplan || true
+          if [[ -f "infra/terraform/environments/single-tenant-aca/m8-deploy-live.tfplan" ]]; then
+            echo "Terraform plan artifact generated."
+          else
+            echo "Terraform plan artifact not generated with placeholder values; scaffold boundary still validated."
+          fi
+
+      - name: Upload Terraform plan artifact (if present)
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-deploy-live-tfplan
+          path: infra/terraform/environments/single-tenant-aca/m8-deploy-live.tfplan
+          retention-days: 3
+          if-no-files-found: ignore
+
+  protected-apply:
+    name: Protected IaC apply boundary
+    runs-on: ubuntu-latest
+    needs: [preflight, terraform-plan]
+    if: ${{ inputs.run_apply }}
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Apply stage guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.execute_live_mutations }}" != "true" ]]; then
+            echo "run_apply=true but execute_live_mutations=false; skipping live terraform apply by default." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Protected apply boundary approved."
+          echo "Scaffold command (not executed in this public-safe template):" >> "$GITHUB_STEP_SUMMARY"
+          echo "terraform -chdir=infra/terraform/environments/single-tenant-aca apply m8-deploy-live.tfplan" >> "$GITHUB_STEP_SUMMARY"
+
+  config-rollout:
+    name: Config rollout boundary
+    runs-on: ubuntu-latest
+    needs: [preflight, azure-auth-deploy, terraform-plan]
+    if: ${{ inputs.run_config_rollout }}
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Config stage guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.execute_live_mutations }}" != "true" ]]; then
+            echo "run_config_rollout=true but execute_live_mutations=false; keeping config stage dry-run-safe." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "Scaffold config rollout command:"
+            echo "az containerapp update --name <bff-app> --resource-group <rg-placeholder> --set-env-vars AUTH_MODE=strict OTEL_EXPORTER_OTLP_ENDPOINT=<endpoint-placeholder>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  app-rollout:
+    name: Container/app rollout boundary
+    runs-on: ubuntu-latest
+    needs: [preflight, azure-auth-deploy, build-publish, terraform-plan]
+    if: ${{ inputs.run_app_rollout }}
+    environment: lab-live-azure-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: App rollout guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.execute_live_mutations }}" != "true" ]]; then
+            echo "run_app_rollout=true but execute_live_mutations=false; app rollout stays dry-run-safe." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "Scaffold app rollout command:"
+            echo "az containerapp update --name <agent-execution-app> --resource-group <rg-placeholder> --image <acr-login-server>/agent-execution:${{ inputs.image_tag }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-summary:
+    name: Deploy summary
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - build-publish
+      - terraform-plan
+    if: ${{ always() }}
+    outputs:
+      deployment_label: ${{ needs.preflight.outputs.deployment_label }}
+      smoke_ready: ${{ inputs.live_azure_tests }}
+    steps:
+      - name: Publish deploy metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### M8 deploy-live summary"
+            echo ""
+            echo "- deployment_label: ${{ needs.preflight.outputs.deployment_label }}"
+            echo "- resource_group_placeholder: <rg-name-placeholder>"
+            echo "- deploy_status: scaffold-complete"
+            echo "- smoke_ready_input: ${{ inputs.live_azure_tests }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke-stage:
+    name: Smoke gate (protected/manual only)
+    needs: deploy-summary
+    if: ${{ inputs.live_azure_tests }}
+    uses: ./.github/workflows/m8-smoke-trace.yml
+    with:
+      environment_slug: ${{ inputs.environment_slug }}
+      deployment_label: ${{ needs.deploy-summary.outputs.deployment_label }}
+      live_azure_tests: ${{ inputs.live_azure_tests }}
+      run_live_azure_checks: false
+      kql_lookback: "30m"
+    secrets: inherit

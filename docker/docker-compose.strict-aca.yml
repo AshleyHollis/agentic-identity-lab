@@ -1,0 +1,43 @@
+# STRICT MODE OVERLAY — for local pre-deployment simulation of deployed AUTH_MODE=strict.
+# AUTH_MODE=mock MUST NOT be used in deployed ACA environments.
+# Replace {tenant-id} and {region} placeholders before testing against a real tenant.
+# This overlay is for local validation only — no real credentials are committed here.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.strict-aca.yml up
+#
+# SECURITY BINDING C2 (Trinity T12, ADR-M6-03):
+#   APIM managed identity MUST NOT be injected as Authorization to BFF.
+#   Delegated user token passes through APIM to BFF unchanged.
+#   OBO token exchange is performed exclusively by Agent Execution Service.
+#
+# AUTH_ISSUER and AUTH_JWKS_URL must point to a real Entra tenant in strict mode.
+# Services will refuse to process requests without a valid JWKS endpoint.
+#
+# OTEL_EXPORTER_OTLP_ENDPOINT: Azure Monitor OTLP ingestion endpoint (ADR-M6-02).
+# For local testing without Azure Monitor, leave unset or use OTEL_SDK_DISABLED=true.
+
+services:
+  bff:
+    environment:
+      - AUTH_MODE=strict
+      - AUTH_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+      - AUTH_JWKS_URL=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+      - OTEL_EXPORTER_OTLP_ENDPOINT=https://{region}.otel.monitor.azure.com/v1/traces
+      - OTEL_SERVICE_NAME=bff
+
+  agent-execution:
+    environment:
+      - AUTH_MODE=strict
+      - AUTH_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+      - AUTH_JWKS_URL=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+      - OTEL_EXPORTER_OTLP_ENDPOINT=https://{region}.otel.monitor.azure.com/v1/traces
+      - OTEL_SERVICE_NAME=agent-execution
+
+  mcp-protected-api:
+    environment:
+      - AUTH_MODE=strict
+      - AUTH_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+      - AUTH_JWKS_URL=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+      - OTEL_EXPORTER_OTLP_ENDPOINT=https://{region}.otel.monitor.azure.com/v1/traces
+      - OTEL_SERVICE_NAME=mcp-protected-api

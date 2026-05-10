@@ -2,10 +2,10 @@
   "spec_id": "007",
   "slug": "variant-client-implementations",
   "milestone": "M7",
-  "phase": "spec.feature",
-  "status": "spec-ready",
+  "phase": "closed",
+  "status": "complete",
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-02",
   "requested_by": "Ashley Hollis",
   "owners": {
     "primary": [
@@ -20,7 +20,7 @@
   "impact": "High",
   "spec_gate_satisfied": true,
   "implementation_blocked": false,
-  "implementation_blocked_reason": "T11 (Morpheus architecture review) ACCEPTED 2026-06-01. T12 (Trinity security review) ACCEPTED 2026-06-01. Binding conditions BC-01 through BC-09 apply before T02-T04 token acquisition code ships. See .progress.md T12 section.",
+  "implementation_blocked_reason": "None — M7 implementation closed. T09 and T10 re-reviews accepted after A-01 remediation; T13 final closeout complete.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -37,21 +37,21 @@
       "priority": 1,
       "token_flow": "MSAL browser PKCE",
       "cache_storage": "sessionStorage",
-      "status": "not-started"
+      "status": "complete"
     },
     "sharepoint-classic": {
       "path": "apps/sharepoint-classic/chat-loader-js/",
       "priority": 2,
       "token_flow": "Pluggable token provider / _spPageContextInfo.aadTokenProviderFactory",
       "cache_storage": "in-memory only (no storage API)",
-      "status": "not-started"
+      "status": "complete"
     },
     "spfx-webpart": {
       "path": "apps/spfx-webpart/identity-chat-webpart/",
       "priority": 3,
       "token_flow": "AadHttpClient via context.aadHttpClientFactory",
       "cache_storage": "SPFx runtime managed (no localStorage by web part)",
-      "status": "not-started"
+      "status": "complete"
     }
   },
   "identity_invariant": "userId and any body field are display/context only. Identity is established solely by the validated bearer token at the BFF.",
@@ -105,18 +105,18 @@
   "task_status": {
     "T11": "accepted",
     "T12": "accepted",
-    "T00": "pending",
-    "T01": "pending",
-    "T02": "pending",
-    "T03": "pending",
-    "T04": "pending",
-    "T05": "pending",
-    "T06": "pending",
-    "T07": "pending",
-    "T08": "pending",
-    "T09": "pending",
-    "T10": "pending",
-    "T13": "pending"
+    "T00": "complete",
+    "T01": "complete",
+    "T02": "complete",
+    "T03": "complete",
+    "T04": "complete",
+    "T05": "complete",
+    "T06": "complete",
+    "T07": "complete",
+    "T08": "complete",
+    "T09": "accepted",
+    "T10": "accepted",
+    "T13": "complete"
   },
   "validation_commands": [
     "python -m pytest",
@@ -152,12 +152,22 @@
   },
   "notes": [
     "Spec 007 created by Mouse (Frontend/SharePoint/TypeScript) as M7 spec-first gate artifact.",
-    "Implementation is BLOCKED pending T12 (Trinity) security review sign-off. T11 (Morpheus) is complete and accepted.",
+    "Implementation gate is open: T11 and T12 are accepted; T00/T01 reconciled complete from Neo's backend validation run.",
     "Backend (BFF, Agent Execution Service, MCP Protected API) unchanged in M7 except minor BFF CORS + optional display_name field.",
     "Runtime language variants (.NET/Node Agent Execution Service) are explicitly out of M7 scope -- future milestone.",
     "Azure E2E gate is M8 per roadmap.md (OQ5 closed). Not a M7 sub-gate. Not part of M7 implementation.",
     "Directive from copilot-directive-20260510202925.md honored: roadmap updated to include Azure E2E gate.",
     "T11 implementation conditions (binding on implementation tasks): (1) T00 must add 'traceparent' to BFF CORS allow_headers. (2) T01: display_name must not be echoed in session response; negative test required; max-length guard recommended. (3) T03: classic loader must not use userId as auth signal; identity invariant comment required at BFF call site.",
-    "T11 sign-off: Morpheus, Lead/Architect, 2026-06-01. Verdict: ACCEPTED. Formal ADR created: docs/adr/0009-m7-display-name-bff-body-field.md."
+    "T11 sign-off: Morpheus, Lead/Architect, 2026-06-01. Verdict: ACCEPTED. Formal ADR created: docs/adr/0009-m7-display-name-bff-body-field.md.",
+    "T03 complete (Mouse): apps/sharepoint-classic/chat-loader-js now includes a pluggable token provider interface with default SharePoint aadTokenProviderFactory implementation and mock provider, manual traceparent forwarding, no token persistence in storage APIs, config placeholders only, updated classic snippet/README, and validation via npm ci + lint + tests.",
+    "T05 complete (Mouse): SPA/classic traceparent unit tests verified; SPFx gained static/unit AadHttpClient traceparent request-option guard; variant READMEs now include Docker Compose + Jaeger walkthrough and BC-07 telemetry/PII prohibitions including tracestate.",
+    "Reconciliation: T00 and T01 marked complete based on reported Neo execution with 239 pytest passing.",
+    "T06 complete (Mouse): diagrams and architecture docs updated for implemented M7 token acquisition and BFF handoff flows across classic, SPFx, and SPA; docs now call out traceparent forwarding, BFF-only boundary, display-only userId/display_name invariant, local/mock M7 scope, and M8 Azure E2E deferral with canonical Agent Execution Service terminology.",
+    "T08 complete (Neo): ran python + SPA/classic/SPFx + compose validation commands successfully, added CI validation gates in .github/workflows/ci.yml, added public-safe checks (placeholder-only, no .default SPA scope, SPFx BFF scope only), and confirmed LIVE_AZURE_TESTS is not defaulted in CI.",
+    "T09 post-implementation architecture review (Morpheus) rejected M7 sign-off on 2026-06-01. Blocking finding A-01: the SPFx client sends userId in the /chat/session request body, which exceeds the approved minimal contract extension (optional display_name only) documented in ADR 0009 and implemented by the BFF request model. Recommended revision owner per rejection protocol: Neo. Required fix: remove userId from the SPFx body and add a regression guard that asserts SPFx sends display_name only.",
+    "2026-06-02 — A-01 remediation applied by Neo: SPFx /chat/session body no longer sends userId and now sends optional display_name only (or omits body when unavailable); regression guards updated in SPFx static test and tests/security/test_m7_variant_identity_boundaries.py. T09 remains pending re-review by Morpheus (not accepted).",
+    "2026-06-02 — T09 re-review accepted by Morpheus: A-01 remediation verified against ADR 0009 and the BFF request model. SPFx now sends display_name only when available, omits the body otherwise, and regression validation passed for focused Python security tests plus SPFx build/test.",
+    "2026-06-02 — T10 re-review accepted by Trinity: re-verified the SPFx A-01 remediation, BFF display_name-only contract, telemetry/JWKS regression coverage, AadHttpClient-only BFF path, placeholder-only SPFx permission scope, and LIVE_AZURE_TESTS opt-in posture. Focused Python security tests (91 passed) plus SPFx build/test passed with no remaining T10 blockers.",
+    "2026-06-02 — T13 final closeout complete by Mouse: Spec 007 closed with M7 status complete, T00-T10 reconciled as complete/accepted, roadmap/current-focus updated, and M8 retained as opt-in not-started live Azure E2E gate."
   ]
 }

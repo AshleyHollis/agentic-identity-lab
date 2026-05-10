@@ -41,8 +41,12 @@ a server-generated UUID4 entirely independent of any user identity claim.
 ## CORS
 
 In `AUTH_MODE=mock` the BFF adds `CORSMiddleware` defaulting to `http://localhost:3000`.
-Set `CORS_ALLOWED_ORIGINS` (comma-separated) to override. Wildcard (`*`) is rejected at
-startup — it is unconditionally incompatible with `allow_credentials=True`.
+Set `CORS_ALLOWED_ORIGINS` (comma-separated) to override (for example:
+`http://localhost:5173,http://localhost:3000,https://localhost:4321`). Wildcard (`*`) is rejected
+at startup — it is unconditionally incompatible with `allow_credentials=True`.
+
+For browser clients, `traceparent` is an allowed CORS request header so W3C trace propagation
+is not blocked by preflight.
 
 In `AUTH_MODE=strict` (or any non-mock mode), CORS middleware is not registered unless
 `CORS_ALLOWED_ORIGINS` is explicitly set.

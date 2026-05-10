@@ -13,6 +13,58 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: |
+            apps/spa-public-client/react-vite/package-lock.json
+            apps/sharepoint-classic/chat-loader-js/package-lock.json
+            apps/spfx-webpart/identity-chat-webpart/package-lock.json
+
+      - name: Install Python validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            -e apps/bff/python-fastapi \
+            -e apps/agent-execution/python-fastapi-agent-framework \
+            -e apps/mcp-protected-api/python-fastapi \
+            pytest \
+            pytest-asyncio \
+            pytest-anyio \
+            pytest-httpx
+
+      - name: Python validation
+        run: python -m pytest
+
+      - name: SPA validation
+        working-directory: apps/spa-public-client/react-vite
+        run: |
+          npm ci
+          npm run build
+          npm run lint
+          npm test
+
+      - name: SharePoint classic validation
+        working-directory: apps/sharepoint-classic/chat-loader-js
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+      - name: SPFx validation
+        working-directory: apps/spfx-webpart/identity-chat-webpart
+        run: |
+          npm ci
+          npm run build
+          npm test
+
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v3
         with:
@@ -21,11 +73,22 @@ jobs:
       - name: Terraform format check
         run: terraform fmt -check -recursive infra/terraform
 
+      - name: Terraform validate (single-tenant-aca)
+        run: |
+          terraform -chdir=infra/terraform/environments/single-tenant-aca init -backend=false
+          terraform -chdir=infra/terraform/environments/single-tenant-aca validate
+
       - name: Docker Compose validation
         run: |
+          docker compose -f docker/docker-compose.yml config --quiet
           docker compose -f docker/docker-compose.yml -f docker/docker-compose.single-tenant.yml config
           docker compose -f docker/docker-compose.yml -f docker/docker-compose.vendor-shaped.yml config
           docker compose -f docker/docker-compose.yml -f docker/docker-compose.cross-tenant.local.yml config
+
+      - name: Public-safe M8 workflow and telemetry checks
+        run: |
+          python tools/ci/public_safe_validation.py
+          python tools/telemetry/validate_m8_kql_contract.py
 
       - name: Docs presence
         run: |

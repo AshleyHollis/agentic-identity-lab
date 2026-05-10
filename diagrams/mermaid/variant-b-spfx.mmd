@@ -1,8 +1,23 @@
-flowchart LR
-  User((User)) --> SPFx[SPFx Web Part]
-  User --> Entra[Entra ID]
-  Entra -->|Delegated token| SPFx
-  SPFx -->|Delegated token (aud: APIM)| APIM[API Management]
-  APIM -->|Forward user token| BFF[BFF/API]
-  BFF -->|OBO token (aud: API A)| APIA[API A]
-  APIA -->|OBO token (aud: API B)| APIB[API B]
+sequenceDiagram
+  autonumber
+  participant User as User
+  participant SPFx as SPFx Web Part
+  participant AAD as AadHttpClientFactory
+  participant BFF as BFF (/chat/session)
+  participant AES as Agent Execution Service
+  participant MCP as MCP Protected API
+
+  User->>SPFx: Open modern page
+  SPFx->>AAD: getClient(bffResourceUri)
+  AAD-->>SPFx: AadHttpClient (token managed by SPFx runtime)
+  SPFx->>SPFx: Generate traceparent
+  SPFx->>BFF: client.post('/chat/session', ...)<br/>headers: traceparent<br/>body: {display_name?}
+  Note over SPFx,BFF: AadHttpClient adds Authorization header; web part never handles raw token
+  Note over SPFx,BFF: userId/display_name is display-only context, never identity
+  BFF->>BFF: Validate bearer token (identity source)
+  BFF->>AES: Forward request + traceparent
+  AES->>MCP: OBO call + traceparent
+  MCP-->>AES: Response
+  AES-->>BFF: Session payload
+  BFF-->>SPFx: {session_id, expires_at}
+  SPFx-->>User: Render session state

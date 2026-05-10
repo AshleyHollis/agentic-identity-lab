@@ -1,0 +1,121 @@
+name: M8 Nightly Shutdown (Protected)
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      environment_slug:
+        description: "Placeholder environment selector (example: agentidlab-live)"
+        required: true
+        default: "agentidlab-live"
+      dry_run:
+        description: "Collect posture without mutating resources"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m8-nightly-shutdown-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  nightly_shutdown:
+    name: Nightly scale-down and stop posture
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-ops
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_SHUTDOWN }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      APIM_RESOURCE_GROUP: ${{ vars.APIM_RESOURCE_GROUP }}
+      ACA_APP_NAMES: ${{ vars.ACA_APP_NAMES }}
+      APIM_SERVICE_NAME: ${{ vars.APIM_SERVICE_NAME }}
+      APIM_STOP_SUPPORTED: ${{ vars.APIM_STOP_SUPPORTED }}
+    steps:
+      - name: Preflight contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AZURE_CLIENT_ID}"
+          test -n "${AZURE_TENANT_ID}"
+          test -n "${AZURE_SUBSCRIPTION_ID}"
+          test -n "${AZURE_RESOURCE_GROUP}"
+          test -n "${ACA_APP_NAMES}"
+          python tools/ci/m9_live_preflight.py \
+            --context lifecycle-identity \
+            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP ACA_APP_NAMES
+          : > m8-nightly-shutdown-summary.csv
+          echo "resource_type,resource_name,classification,notes" >> m8-nightly-shutdown-summary.csv
+
+      - name: Azure login (OIDC lifecycle identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Scale ACA apps to zero (idempotent, non-destructive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra APPS <<< "${ACA_APP_NAMES}"
+          for app in "${APPS[@]}"; do
+            app_trimmed="$(echo "${app}" | xargs)"
+            if [[ -z "${app_trimmed}" ]]; then
+              continue
+            fi
+            current_min="$(az containerapp show --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --query "properties.template.scale.minReplicas" -o tsv || echo "")"
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "aca,${app_trimmed},scaled_to_zero,dry-run mode; current minReplicas=${current_min:-unknown}" >> m8-nightly-shutdown-summary.csv
+              continue
+            fi
+            if [[ -z "${current_min}" || "${current_min}" != "0" ]]; then
+              az containerapp update --name "${app_trimmed}" --resource-group "${AZURE_RESOURCE_GROUP}" --min-replicas 0 --output none
+              echo "aca,${app_trimmed},scaled_to_zero,minReplicas set to 0" >> m8-nightly-shutdown-summary.csv
+            else
+              echo "aca,${app_trimmed},scaled_to_zero,already at minReplicas=0" >> m8-nightly-shutdown-summary.csv
+            fi
+          done
+
+      - name: APIM shutdown posture
+        shell: bash
+        run: |
+          set -euo pipefail
+          apim_rg="${APIM_RESOURCE_GROUP:-${AZURE_RESOURCE_GROUP}}"
+          if [[ -z "${APIM_SERVICE_NAME}" ]]; then
+            echo "apim,<unset>,manual_follow_up_required,APIM_SERVICE_NAME was not configured" >> m8-nightly-shutdown-summary.csv
+          elif [[ "${APIM_STOP_SUPPORTED}" == "true" ]]; then
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "apim,${APIM_SERVICE_NAME},stopped,dry-run mode; APIM stop support declared by environment setting" >> m8-nightly-shutdown-summary.csv
+            else
+              echo "apim,${APIM_SERVICE_NAME},manual_follow_up_required,APIM stop/start command is tier/tooling-specific; operator review required" >> m8-nightly-shutdown-summary.csv
+            fi
+          else
+            sku="$(az apim show --name "${APIM_SERVICE_NAME}" --resource-group "${apim_rg}" --query "sku.name" -o tsv || echo "unknown")"
+            echo "apim,${APIM_SERVICE_NAME},left_running,sku=${sku}; left running for non-destructive nightly path" >> m8-nightly-shutdown-summary.csv
+          fi
+          echo "log_analytics,<workspace>,left_running,workspace remains running; control cost via retention/cap" >> m8-nightly-shutdown-summary.csv
+          echo "app_insights,<application-insights>,left_running,app insights remains running by design" >> m8-nightly-shutdown-summary.csv
+          echo "resource_group,<environment>,destroy_only,destroy/recreate is manual-only and excluded from schedule path" >> m8-nightly-shutdown-summary.csv
+
+      - name: Publish shutdown summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### M8 nightly shutdown action summary"
+            echo ""
+            echo "| Resource type | Resource name | Classification | Notes |"
+            echo "|---|---|---|---|"
+            tail -n +2 m8-nightly-shutdown-summary.csv | while IFS=',' read -r rtype rname classification notes; do
+              echo "| ${rtype} | ${rname} | ${classification} | ${notes} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

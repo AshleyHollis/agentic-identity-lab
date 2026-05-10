@@ -9,12 +9,12 @@ Principles
 
 | Term | Meaning | Filesystem path |
 |------|---------|-----------------|
-| **Agent Execution Service** | Lab's application-level agent execution service — hosts AI agents, enforces Entra Agent ID / OBO boundaries, code-first successor to PromptFlow | `apps/agent-gateway/` *(legacy path; not renamed until Neo completes runtime rename)* |
+| **Agent Execution Service** | Lab's application-level agent execution service — hosts AI agents, enforces Entra Agent ID / OBO boundaries, code-first successor to PromptFlow | `apps/agent-execution/` |
 | **Identity Lab Agent Execution Service** | Qualified display name used when org/lab context is useful | Same service as above |
 | **AKS Agent Gateway** | Standalone agentgateway.dev infrastructure proxy running as an AKS pod sidecar | Deployed to AKS; not a local source directory |
 
-> **Slug:** `agent-execution` (used in new Terraform resource names, K8s labels, and Docker image tags after runtime rename).  
-> **Legacy alias:** Docker Compose service `agent-gateway` and directory `apps/agent-gateway/` are unchanged until Neo completes the runtime rename.  
+> **Slug:** `agent-execution` (used in Terraform resource names, K8s labels, Docker image tags, and current local runtime wiring).  
+> **Historical alias:** older ADRs/spec notes may still reference `agent-gateway` or `apps/agent-gateway/`; treat those as pre-M6 naming only.  
 > **Prohibited terms in new prose:** "Agentic Layer" (superseded), unqualified "Agent Gateway" (collision with AKS Agent Gateway), unqualified "Agent Service" (collision with Azure AI Agent Service / Foundry).  
 > **Historical note:** "Agentic Layer" was the canonical term from ADR 0006 (M5). ADR 0008 supersedes ADR 0006.
 
@@ -22,19 +22,20 @@ Principles
 
 ## Status Dashboard
 
-> Last updated: 2026-06-01 · Maintained by Tank
+> Last updated: 2026-07-07 · Maintained by Mouse + Tank
 
-**▶ Current position: M7 — Variant client implementations (spec creation phase). M6 complete and closed.**
+**▶ Current position: M9 security planning/review + live deployment readiness prep — live Azure execution remains blocked until protected-environment gates are accepted.**
 
 > **Does everything eventually deploy to Azure and get verified end-to-end?**  
 > **Yes.** The intended destination is a live Azure deployment (ACA + APIM) where a real browser session drives a delegated Entra token through APIM → BFF → Agent Execution Service → MCP Protected API and all hops are smoke-tested with real Entra tokens and traces visible in Azure Monitor.  
-> The lab reaches that in two distinct steps:
+> The lab reaches that through staged gates:
 >
 > - **M6** established the *configuration and Terraform validation baseline* — infrastructure scaffolded, `AUTH_MODE=strict` verified, `terraform validate` passes. **No `terraform apply` was run; no live resources were created.** M6 proves the configuration is correct, not that the deployment works.
-> - **M8 (Live Azure E2E verification)** is the gate where a configured environment is actually deployed and the full browser → APIM → BFF → Agent Execution Service → MCP chain is smoke-tested with real Entra tokens. This milestone is explicitly opt-in and requires a private, secrets-holding environment — it cannot run from the public CI pipeline.
-> - **M7 (Variant clients)** implements the client-side delegated flows (SPFx, SPA, SharePoint classic) offline/locally. M7 clients are *necessary inputs* to the M8 E2E gate — they exercise the delegated-token acquisition path — but M7 alone does not prove live Azure deployment. M7 + a configured M6 environment together enable M8.
+> - **M7 (Variant clients)** implements the client-side delegated flows (SPFx, SPA, SharePoint classic) offline/locally. M7 clients are *necessary inputs* to live E2E because they exercise delegated-token acquisition, but M7 alone does not prove live Azure deployment.
+> - **M8 (Live Azure E2E gate scaffolding)** delivered protected workflow scaffolds and static/public-safe validation gates. M8 did not claim live Azure deployment.
+> - **M9 (Live Azure E2E execution acceptance)** is the first milestone allowed to claim a configured protected environment was actually deployed and browser → APIM → BFF → Agent Execution Service → MCP was smoke-tested with real Entra tokens.
 >
-> **Public-repo constraint (permanent):** live credentials, tenant IDs, subscription IDs, and real Entra tokens must never be committed. M8 must be run opt-in against a private environment; its smoke-test scripts live in the repo but the secrets that drive them do not.
+> **Public-repo constraint (permanent):** live credentials, tenant IDs, subscription IDs, and real Entra tokens must never be committed. M9 live execution must run opt-in against a private protected environment; its smoke-test scripts live in the repo but the secrets that drive them do not.
 
 | # | Milestone | Spec | Status | Validation |
 |---|-----------|------|--------|------------|
@@ -44,11 +45,13 @@ Principles
 | M4 | Local runtime ergonomics | [Spec 005](.squad\specs\005-local-runtime-ergonomics\README.md) | ✅ Complete | Compose configs passed; `python -m pytest` 65 passed |
 | M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | ✅ Complete | `python -m pytest` 229 passed; Terraform fmt/init/validate passed; Compose tracing config passed |
 | M6 | Azure deployment baseline *(config + Terraform validation only — no live apply)* | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | ✅ Complete | pytest 235 passed; `terraform fmt/init/validate` passed; Compose strict-aca + tracing configs passed; no-secret scan passed |
-| M7 | Variant client implementations *(offline delegated flows; prepares clients for M8 E2E)* | *(spec not yet created)* | 📋 Roadmap — spec creation next | variant tests + `python -m pytest` |
-| M8 | Live Azure E2E verification *(opt-in; requires configured private environment)* | *(spec not yet created)* | 🔭 Future — after M7 | browser → APIM → BFF → Agent Execution Service → MCP smoke-tested with real Entra tokens; traces in Azure Monitor |
+| M7 | Variant client implementations *(offline delegated flows; prepares clients for M8 E2E)* | [Spec 007](.squad\specs\007-variant-client-implementations\README.md) | ✅ Complete and closed (T09/T10 accepted after A-01 remediation; T13 closeout complete) | Python full suite 246 passed; focused T09 re-review tests 19 passed; focused T10 security tests 91 passed; SPA/classic/SPFx validations + compose config passed |
+| M8 | Live Azure E2E verification *(opt-in; requires configured private environment)* | [Spec 008](.squad\specs\008-live-azure-e2e-gate\README.md) | ✅ Complete and closed (T15) | `state.json` parse passed; `python tools/ci/public_safe_validation.py` passed; `python tools/telemetry/validate_m8_kql_contract.py` passed; focused `tests/security/test_m8_public_safe_validation.py` passed; no live Azure execution claimed in this session |
+| M9 | Live Azure E2E execution acceptance *(protected deploy + browser smoke + KQL proof)* | [Spec 009](.squad\specs\009-live-azure-execution-and-evidence\README.md) | 🟡 Spec-ready; live execution blocked pending [CHECKPOINT] | Spec artifacts complete; no live execution claim without protected-environment approval, strict auth, APIM token-boundary proof, positive/negative KQL evidence, cost-control verification, and Tank/Trinity/Morpheus reviewer gates. |
 
 > **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.  
-> **M8 note:** M8 is opt-in by design. Public CI cannot hold the secrets required for live deployment. Smoke-test scripts will live in this repo; the secrets-holding environment configuration does not.
+> **M8 note:** M8 remains opt-in by design. Public CI cannot hold the secrets required for live deployment. In this closeout session, live workflows remained scaffolds and were **not** executed against Azure.
+> **M9 note:** Spec 009 now imports the Trinity security gates, Tank deployment readiness tasks, and Mouse client readiness blockers. Live execution remains blocked until the [CHECKPOINT], protected GitHub Environment approvals, and reviewer gates are satisfied.
 
 ---
 
@@ -73,7 +76,7 @@ Principles
 **Key files:**
 - `apps/shared/python/identity_lab_auth/*`
 - `apps/bff/python-fastapi/app/auth.py`
-- `apps/agent-gateway/python-fastapi-agent-framework/app/auth.py` *(Agent Execution Service — legacy path)*
+- `apps/agent-execution/python-fastapi-agent-framework/app/auth.py`
 - `apps/mcp-protected-api/python-fastapi/app/auth.py`
 - `tests/fixtures/sample-claims/*`
 - `config/env/*.env.example`
@@ -98,7 +101,7 @@ Principles
 | `python -m pytest` | All tests pass including integration tests. |
 
 **Key files:**
-- `apps/agent-gateway/python-fastapi-agent-framework/app/*` *(Agent Execution Service — legacy path)*
+- `apps/agent-execution/python-fastapi-agent-framework/app/*`
 - `apps/mcp-protected-api/python-fastapi/app/*`
 - `tests/integration/*`
 - `.squad/specs/003-local-delegated-flow-integration/*`
@@ -231,10 +234,10 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 ## Milestone 7 — Variant client implementations *(offline delegated flows)*
 
-**Goal:** Implement first UI clients (SPFx, SharePoint classic, SPA) that exercise delegated flows.  
+**Goal:** Implement first UI clients (SPFx, SharePoint classic, SPA) that exercise delegated flows offline/locally.  
 **Owner agents:** Mouse, Neo  
-**Impact:** Medium  
-**Status:** 📋 Roadmap (spec not yet created)
+**Impact:** High  
+**Status:** ✅ Complete and closed (2026-06-02) — [Spec 007](.squad\specs\007-variant-client-implementations\README.md)
 
 > **Scope clarification — what M7 is and is not:**  
 > M7 clients prove delegated token acquisition from the browser side. Flows are exercised locally/offline (or against a mock BFF) and validated with `python -m pytest`. M7 does **not** by itself prove live Azure deployment — even when all M7 tests pass, the chain browser → APIM → BFF → Agent Execution Service → MCP Protected API has not been smoke-tested against real Azure infrastructure. That verification is the M8 gate.  
@@ -244,14 +247,24 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 | Capability | Details |
 |-----------|---------|
-| **SPFx web part** | SPFx web part acquires a delegated token from Entra ID via MSAL and calls BFF with the correct audience. |
-| **SharePoint classic integration** | SharePoint classic page integration works through the same BFF delegated flow. |
-| **SPA (public client)** | Single-page app uses PKCE flow, acquires delegated token, calls BFF. |
-| **Token handling documented** | Each variant's token acquisition, audience, and OBO hand-off is documented with a diagram. |
-| **Variant-specific tests** | Variant integration tests pass; all flows verified with `python -m pytest`. |
-| **Trace visualization** | All three client variants generate trace spans visible in the Jaeger UI (or Azure Monitor in deployed mode). |
+| **SPFx web part** | SPFx web part acquires a delegated token from Entra ID via `AadHttpClient` and calls BFF `/chat/session` with the correct audience. Token managed by SPFx runtime — not in localStorage. |
+| **SharePoint classic integration** | Classic loader script acquires delegated token via pluggable token provider (`_spPageContextInfo.aadTokenProviderFactory`); calls BFF. Token used in-memory only. |
+| **SPA (public client)** | React/Vite SPA uses MSAL PKCE flow (`cacheLocation: sessionStorage`), acquires delegated token, calls BFF `/chat/session`. |
+| **Identity invariant enforced** | `userId` in any body field is display/context only — code comments + negative tests confirm BFF rejects requests with `userId` but no/invalid bearer token (401). |
+| **Token handling documented** | Each variant's token acquisition, cache strategy, and BFF handoff documented with Mermaid diagram. Token security section in each variant README. |
+| **No-token-persistence validated** | Per-variant test/assertion: SPA uses `sessionStorage` (not `localStorage`); classic loader uses in-memory only; SPFx web part calls no storage API. |
+| **Variant-specific tests** | Negative tests (no-token-persistence, no-userId-auth-fallback) pass; `python -m pytest` passes (235+ tests). |
+| **Trace visualization** | All three client variants generate W3C TraceContext `traceparent` spans; visible in local Jaeger (`localhost:16686`) or Azure Monitor when deployed. |
 
 **Key files:** `apps/sharepoint-*`, `apps/spfx-webpart`, `apps/spa-public-client`
+
+### Final M7 validation summary
+
+- Full Python regression (T08 baseline): `python -m pytest` → **246 passed**.
+- Focused T09 re-review: `python -m pytest tests/security/test_m7_variant_identity_boundaries.py tests/security/test_bff_chat_session.py` → **19 passed**; `cd apps/spfx-webpart/identity-chat-webpart && npm run build && npm test` → **pass**.
+- Focused T10 re-review: `python -m pytest tests/security/test_bff_chat_session.py tests/security/test_m7_variant_identity_boundaries.py tests/security/test_jwks_strict.py tests/security/test_telemetry.py` → **91 passed**; `cd apps/spfx-webpart/identity-chat-webpart && npm run build && npm test` → **pass**.
+- Cross-variant validation remained green from T08: SPA/classic/SPFx validations passed, `docker compose -f docker/docker-compose.yml config --quiet` passed, and public-safe scan passed.
+- Live Azure E2E was intentionally **not run in M7**; this remains the M8 opt-in gate.
 
 ---
 
@@ -261,24 +274,57 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 **Owner agents:** Tank (Infra/Deploy), Trinity (Security validation), Morpheus (Architecture sign-off)  
 **Reviewers:** All  
 **Impact:** High — this is the milestone that answers "does it actually work in Azure?"  
-**Status:** 🔭 Future — after M7
+**Status:** ✅ Complete and closed (T15)
 
 > **Opt-in by design:** M8 cannot run from public CI. It requires a private environment holding real credentials (subscription ID, tenant ID, Entra app registrations, client secrets or federated credentials). These values must never be committed. M8 smoke-test scripts will live in this repository; the secrets-holding environment configuration does not.  
 > **Prerequisites:** M6 (Terraform config validated) + M7 (working client-side delegated token acquisition) must both be complete before M8 can be meaningfully executed.
 
-### ✅ Done by end of M8 — what works
+### ✅ Done by end of M8 — what works now
 
 | Capability | Details |
 |-----------|---------|
-| **`terraform apply` executed** | Real Azure resources provisioned: APIM, Container Apps (BFF, Agent Execution Service, MCP Protected API), App Insights, managed identities. |
-| **Real Entra app registrations** | App registrations (BFF API, Agent Execution Service blueprint audience, MCP Protected API) created with correct scopes and OBO permissions. |
-| **Browser → APIM smoke test** | A client (SPA or SPFx from M7) acquires a real Entra delegated token, calls APIM, and receives a valid response from the full chain. |
-| **OBO chain verified live** | Agent Execution Service performs a live OBO token exchange using managed identity; MCP Protected API validates the OBO token. No fixture or mock paths used. |
-| **Azure Monitor traces** | Full W3C trace visible in Azure Monitor / Application Insights: APIM correlation ID → BFF span → Agent Execution Service span → MCP Protected API span. |
-| **Auth rejection verified** | Invalid token, wrong audience, and missing scope all produce 401s at the correct service boundary — verified against the live endpoint. |
-| **Smoke test scripts** | Runnable scripts in `tests/e2e/` (pointing at environment-variable-supplied endpoint URLs) that can be re-executed against any configured environment. |
+| **Protected live workflow scaffolds** | `m8-live-oidc-contract.yml`, `m8-deploy-live.yml`, `m8-start-resume.yml`, `m8-nightly-shutdown.yml`, and `m8-smoke-trace.yml` are in place with protected-environment/OIDC boundaries and opt-in live gates. |
+| **Public-safe validation gates** | CI and local checks enforce placeholder-only identifiers, no unsafe live defaults, principal-scope boundaries, and telemetry leakage coverage (`tools/ci/public_safe_validation.py`, `tools/telemetry/validate_m8_kql_contract.py`). |
+| **Canonical smoke/trace contract wiring** | Browser harness and KQL contract validators are wired for static/offline validation with hard-fail semantics represented for leakage checks. |
+| **Operator documentation** | ACA operator runbook documents deploy/start/smoke/shutdown sequence, cost model, and optional T06 destroy posture (`docs/deployment/aca/m8-operator-guide.md`). |
+| **Closeout task reconciliation** | Required path statuses are complete/accepted through T15; T06 is explicitly optional, not implemented, and non-blocking. |
 
-**Key files:** `tests/e2e/`, `infra/terraform/environments/single-tenant-aca/`, `docs/deployment/aca/README.md`
+**Validation summary (closeout):**
+- `python -c "import json; json.load(open(r'.squad\\specs\\008-live-azure-e2e-gate\\state.json', encoding='utf-8')); print('state.json parse ok')"`
+- `python tools/ci/public_safe_validation.py`
+- `python tools/telemetry/validate_m8_kql_contract.py`
+- `python -m pytest -q tests/security/test_m8_public_safe_validation.py`
+
+**Key files:** `.github/workflows/m8-*.yml`, `tools/ci/public_safe_validation.py`, `tools/telemetry/validate_m8_kql_contract.py`, `docs/deployment/aca/m8-operator-guide.md`
+
+> **Live execution note:** No live Azure deployment, workflow dispatch, start/stop operation, or smoke trace run was executed or claimed during this closeout session.
+
+---
+
+## Milestone 9 — Live Azure E2E execution acceptance *(protected environment only)*
+
+**Goal:** Execute the first claimable live Azure deployment and browser smoke for browser → APIM → BFF → Agent Execution Service → MCP Protected API, then prove identity-boundary and telemetry-safety acceptance with Azure Monitor / Application Insights KQL.  
+**Owner agents:** Tank (Infra/Deploy), Trinity (Security validation), Morpheus (Architecture sign-off), Neo (App/runtime fixes), Mouse (Browser smoke)  
+**Impact:** High — live identity, protected environments, OIDC, and telemetry leakage prevention.  
+**Status:** 🟡 Spec-ready — [Spec 009](.squad\specs\009-live-azure-execution-and-evidence\README.md) exists; M9 MUST NOT claim live execution until the [CHECKPOINT], protected-environment gates, and Tank/Trinity/Morpheus reviews are accepted.
+
+### Required M9 security gates and execution contract
+
+- Protected GitHub Environments only; public CI remains validation-only and never requests Azure tokens.
+- Separate purpose-scoped OIDC identities for deploy/apply, smoke/trace verification, and lifecycle operations, or a documented equivalently constrained model.
+- `AUTH_MODE=strict` for every live service; fixture/mock-token paths blocked.
+- APIM validates issuer/audience/scope and preserves the delegated bearer token only to the BFF.
+- BFF validates the inbound user token and never performs MCP OBO.
+- Agent Execution Service is the only MCP OBO boundary.
+- MCP Protected API rejects the original user token and accepts only the downstream MCP-audience token.
+- Workflow logs, traces, summaries, artifacts, and KQL result exports contain no raw tokens, live endpoint values, account metadata, or PII claim keys/values.
+- KQL acceptance requires positive role/operation correlation and negative zero-row leakage proof across requests, dependencies, traces, and logs.
+- Required resources: resource group, ACR, ACA environment/apps for BFF / Agent Execution Service / MCP Protected API, APIM, managed identities, App Insights, and Log Analytics.
+- Required protected environments: `lab-live-azure-deploy`, `lab-live-azure-smoke`, and `lab-live-azure-ops`.
+- Required order: static validation → OIDC contract → zero-mutation deploy rehearsal → approved live deploy → start/resume if needed → browser smoke/trace → positive/negative KQL → redacted evidence review → shutdown/scale-down verification.
+- Mandatory cost controls: ACA scale-down where compatible, nightly shutdown, documented APIM/App Insights/Log Analytics/ACR residual costs, and optional teardown only by explicit manual approval.
+
+**Planning artifact:** `.squad\specs\009-live-azure-execution-and-evidence\`
 
 ---
 
@@ -290,10 +336,11 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 | M5 (AKS flows) | AKS Agent Gateway proxy spans (`list_tools`, `call_tool`) | Same Jaeger UI via agentgateway.dev native integration |
 | M6 (config baseline) | Full deployed chain topology designed and OTLP config documented — **not yet running live** | Azure Monitor (OTLP endpoint — config-only swap) |
 | M7 (clients) | All variant client → BFF spans (offline/local) | Jaeger (local) or Azure Monitor (if deployed) |
-| M8 (live E2E — opt-in) | Full chain live: browser → APIM → BFF → Agent Execution Service → MCP Protected API with real Entra tokens | Azure Monitor / Application Insights (live environment) |
+| M8 (live E2E — opt-in) | Protected workflow scaffolds and telemetry contracts validated statically/offline; live execution remains operator-invoked only | Azure Monitor / Application Insights contract wiring validated; live evidence requires separate protected run |
+| M9 (live execution + evidence) | Planned protected live deploy, browser smoke, positive chain KQL, and negative leakage KQL | Azure Monitor / Application Insights; public evidence must be redacted |
 
 **Invariants (all phases):**
 - W3C TraceContext (`traceparent`/`tracestate`) propagated on all inter-service HTTP calls.
-- Span attributes follow `sanitize_claims()` rules: `oid`, `sub`, `email`, `upn`, raw tokens **never** in spans.
+- Span attributes follow `sanitize_claims()` rules: `oid`, `sub`, `email`, `upn`, `preferred_username`, `name`, `given_name`, `family_name`, raw tokens **never** in spans.
 - `OTEL_SDK_DISABLED=true` (or no-op exporter) in unit-test runs; tracing does not require a running Jaeger instance in offline pytest.
 

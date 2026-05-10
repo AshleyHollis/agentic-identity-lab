@@ -35,7 +35,11 @@ from identity_lab_auth.jwks import (  # noqa: E402
     _validate_algorithm,
     validate_strict,
 )
-from identity_lab_auth.auth_settings import AUTH_FIXTURE_HEADER, AuthMode  # noqa: E402
+from identity_lab_auth.auth_settings import (  # noqa: E402
+    AUTH_FIXTURE_HEADER,
+    AuthMode,
+    load_fixture_claims,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +248,16 @@ class TestValidateStrictAlgorithmRejection:
         token = _make_jwt_with_header({"alg": "HS512", "kid": "k1", "typ": "JWT"})
         with pytest.raises(ValueError, match="Rejected algorithm"):
             validate_strict(token, self._cache_with_no_fetch(), allowed_audiences=["test"])
+
+    def test_alg_rejections_hold_with_fixture_payload(self) -> None:
+        """Regression: fixture-based payloads cannot weaken alg:none / HS* rejection."""
+        claims = load_fixture_claims("delegated-user", ROOT / "tests" / "fixtures" / "sample-claims")
+        assert claims is not None
+
+        for algorithm in ("none", "HS256", "HS384", "HS512"):
+            token = _make_jwt_with_header({"alg": algorithm, "kid": "k1", "typ": "JWT"}, payload=claims)
+            with pytest.raises(ValueError, match="Rejected algorithm"):
+                validate_strict(token, self._cache_with_no_fetch(), allowed_audiences=["test"])
 
 
 class TestValidateStrictKidRejection:

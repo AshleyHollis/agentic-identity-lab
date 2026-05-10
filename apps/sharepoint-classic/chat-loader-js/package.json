@@ -1,0 +1,13 @@
+{
+  "name": "@agentic-identity-lab/sharepoint-classic-chat-loader",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal SharePoint classic loader placeholder for delegated bearer token handoff",
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1"
+  }
+}

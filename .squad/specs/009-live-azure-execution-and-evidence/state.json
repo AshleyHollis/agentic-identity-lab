@@ -1,0 +1,339 @@
+{
+  "spec_id": "009",
+  "slug": "live-azure-execution-and-evidence",
+  "milestone": "M9",
+  "phase": "implement-t04-dispatch-attempt-blocked-remote-workflow-inventory-empty",
+  "status": "t01-complete-t02-accepted-partial-t04-dispatch-blocked-remote-workflows-missing",
+  "created": "2026-05-10",
+  "updated": "2026-05-11",
+  "requested_by": "Ashley Hollis",
+  "owners": {
+    "primary": [
+      "Tank",
+      "Neo",
+      "Mouse",
+      "Trinity",
+      "Morpheus"
+    ],
+    "reviewers": [
+      "Tank",
+      "Trinity",
+      "Morpheus"
+    ]
+  },
+  "impact": "High",
+  "spec_gate_satisfied": true,
+  "implementation_blocked": true,
+  "implementation_blocked_reason": "T04 zero-mutation protected dispatch rehearsal was attempted, but GitHub workflow_dispatch endpoints for m8-live-oidc-contract.yml and m8-deploy-live.yml return HTTP 404 because the remote repository currently reports no registered workflows. Zero-mutation/lifecycle validators pass; smoke-runtime placeholders remain pending for post-T04 stages.",
+  "artifacts": {
+    "README.md": "complete",
+    "goals.md": "complete",
+    "research.md": "complete",
+    "requirements.md": "complete",
+    "design.md": "complete",
+    "tasks.md": "complete",
+    "state.json": "complete",
+    ".progress.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-t03-security-gate-review.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-github-environment-shells.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-azure-entra-access-probe.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-github-environment-shell-security-review.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-reviewer-gates-and-env-inventory.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-entra-discovery.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-t02-reviewer-gate-review.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-entra-discovery-review.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-oidc-binding-result.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-oidc-binding-review.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-rg-rbac-binding-result.md": "complete",
+    ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-runtime-vars-t04-readiness.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete"
+  },
+  "adrs": {
+    "ADR-M9-01": "Reuse M8 protected workflow family",
+    "ADR-M9-02": "Redacted evidence only",
+    "ADR-M9-03": "Cost controls are closeout gates",
+    "ADR-M9-04": "Reviewer gates before live success claims"
+  },
+  "task_status": {
+    "T00": "complete",
+    "T01": "complete-environment-shells-created-no-secrets",
+    "T02": "accepted-partial-rg-rbac-trinity-accepted-deterministic-runtime-names-set-zero-mutation-dispatch-pending",
+    "T03": "accepted-blocked-state",
+    "T04": "blocked-dispatch-attempted-workflow-dispatch-endpoints-404-no-remote-workflows",
+    "T05": "pending",
+    "T06": "pending",
+    "T07": "blocked-pending-checkpoint",
+    "T08": "pending",
+    "T09": "pending",
+    "T10": "pending",
+    "T11": "pending",
+    "T12": "pending",
+    "T13": "pending",
+    "T14": "pending",
+    "T15": "pending",
+    "T16": "pending",
+    "T17": "pending"
+  },
+  "live_azure_gate": {
+    "status": "blocked-remote-workflow-dispatch-unavailable",
+    "opt_in_flag": "LIVE_AZURE_TESTS=true",
+    "ci_default": false,
+    "private_environment_required": true,
+    "canonical_path": "browser -> APIM -> BFF -> Agent Execution Service -> MCP Protected API -> Azure Monitor/Application Insights",
+    "session_live_execution": "dispatch-attempt-blocked",
+    "session_live_evidence": "redacted-blocker-note-only",
+    "t01_audit_artifact": ".squad\\decisions\\inbox\\tank-m9-t01-protected-env-audit.md",
+    "repository_environment_count": 3,
+    "trinity_t03_verdict": "accepted-blocked-state",
+    "t03_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-t03-security-gate-review.md",
+    "t03_live_execution": "not-executed",
+    "t03_live_evidence": "none",
+    "t02_access_probe_artifact": ".squad\\decisions\\inbox\\tank-m9-azure-entra-access-probe.md",
+    "provider_microsoft_app_registration": "registered",
+    "github_env_placeholder_metadata_visibility": "names-readable-values-hidden",
+    "github_env_placeholder_presence": "identity-secrets-rg-vars-and-deterministic-aca-apim-runtime-names-present-smoke-and-optional-runtime-vars-partial",
+    "github_env_reviewer_gate_status": "accepted-required_reviewers-on-all-3-environments-ashleyhollis-prevent_self_review-false-zero-wait-posture",
+    "t02_entra_discovery_artifact": ".squad\\decisions\\inbox\\tank-m9-entra-discovery.md",
+    "t02_entra_discovery_summary": "lab-scoped-deploy-smoke-ops-apps-created-required-env-subject-federation-present",
+    "t02_reviewer_gate_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-t02-reviewer-gate-review.md",
+    "t02_reviewer_gate_review_verdict": "accepted-as-far-as-possible-blocked-external-placeholders-and-entra-federation",
+    "t02_trinity_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-entra-discovery-review.md",
+    "t02_trinity_verdict": "accepted-partial-blocked",
+    "t02_review_live_execution": "not-executed",
+    "t02_review_live_evidence": "none",
+    "t02_remaining_blockers": "protected zero-mutation OIDC/deploy dispatches are blocked because workflow_dispatch endpoints return HTTP 404 with empty remote workflow inventory; optional lifecycle runtime vars (APIM_STOP_SUPPORTED, M8_READINESS_URL) and smoke runtime values remain pending for post-T04 execution paths",
+    "t02_trinity_oidc_binding_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-oidc-binding-review.md",
+    "t02_trinity_oidc_binding_review_verdict": "accepted-partial-blocked",
+    "t02_rg_scope": "rg-agent-identity-lab-dev-aca",
+    "t02_rg_location": "eastus",
+    "t02_rbac_binding_status": "accepted-rg-scoped-deploy-smoke-ops-roles-bound",
+    "t02_rg_rbac_artifact": ".squad\\decisions\\inbox\\tank-m9-rg-rbac-binding-result.md",
+    "t02_trinity_rg_rbac_review_artifact": ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md",
+    "t02_trinity_rg_rbac_review_verdict": "rg-rbac-portion-accepted-t02-accepted-partial-blocked",
+    "t04_dispatch_blocker": "workflow_dispatch HTTP 404 for m8-live-oidc-contract.yml and m8-deploy-live.yml; gh workflow inventory on remote repository returned empty"
+  },
+  "external_setup_prerequisite": {
+    "required_protected_environments": [
+      "lab-live-azure-deploy",
+      "lab-live-azure-smoke",
+      "lab-live-azure-ops"
+    ],
+    "required_reviewers": [
+      "Tank",
+      "Trinity",
+      "Morpheus"
+    ],
+    "federated_subject_patterns": [
+      "repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-deploy",
+      "repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-smoke",
+      "repo:<ORG_OR_USER>/<REPO>:environment:lab-live-azure-ops"
+    ],
+    "federated_audience": "api://AzureADTokenExchange",
+    "next_safe_validation_sequence": [
+      "python tools\\ci\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode zero-mutation",
+      "python tools\\ci\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode lifecycle-runtime",
+      "python tools\\ci\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode smoke-runtime",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py",
+      "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+      "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql"
+    ],
+    "zero_mutation_dispatch_sequence": [
+      ".github\\workflows\\m8-live-oidc-contract.yml",
+      ".github\\workflows\\m8-deploy-live.yml (run_apply=false, run_config_rollout=false, run_app_rollout=false, execute_live_mutations=false, live_azure_tests=false)"
+    ],
+    "lifecycle_identity_constraint": "Lifecycle identity remains stop/start/scale scoped and cannot deploy/apply/destroy/delete resources."
+  },
+  "validation_commands": [
+    "python -c \"import json; json.load(open(r'.squad\\\\specs\\\\009-live-azure-execution-and-evidence\\\\state.json', encoding='utf-8')); print('state.json parse ok')\"",
+    "python tools\\\\ci\\\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode zero-mutation",
+    "python tools\\\\ci\\\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode lifecycle-runtime",
+    "python tools\\\\ci\\\\m9_github_environment_check.py --repo <ORG_OR_USER>/<REPO> --mode smoke-runtime",
+    "python tools\\\\ci\\\\public_safe_validation.py",
+    "python tools\\\\telemetry\\\\validate_m8_kql_contract.py",
+    "python tools\\\\ci\\\\m8_browser_smoke_harness.py --mode static",
+    "python tools\\\\ci\\\\m8_smoke_trace_contract.py validate --workflow-file .github\\\\workflows\\\\m8-smoke-trace.yml --positive-kql tools\\\\telemetry\\\\kql\\\\m8-positive-chain.kql --negative-kql tools\\\\telemetry\\\\kql\\\\m8-negative-leakage.kql"
+  ],
+  "dependencies": {
+    "blocking": [
+      "008-live-azure-e2e-gate"
+    ],
+    "notes": "M9 depends on M8 protected scaffolds plus private Azure/GitHub environment values that remain outside the repository."
+  },
+  "t03_security_gate": {
+    "reviewer": "Trinity",
+    "date": "2026-05-10",
+    "verdict": "ACCEPTED blocked state",
+    "scope": "Spec 009 T01/T02 state review only; no live Azure calls, workflow dispatches, or GitHub/Azure mutations.",
+    "accepted_reason": "Tank evidence and local static validators show public-safe workflow contracts, identity separation placeholders, protected preflight wiring, and KQL leakage contracts are present; the only blocker is external protected-environment/OIDC setup absence.",
+    "blocked_conditions": [
+      "Required GitHub repository environments now exist; required reviewers/approval gates still need safe identity mapping and configuration.",
+      "Environment-scoped secrets/variables must be configured using placeholder names from Spec 009 without committing or printing values.",
+      "Separate or equivalently constrained Entra federated credentials must be bound to deploy, smoke, and lifecycle GitHub OIDC subjects.",
+      "Lifecycle identity must remain stop/start/scale focused and must not deploy, apply, destroy, or delete resources.",
+      "Zero-mutation protected workflow checks must pass before any live mutation or success claim.",
+      "Spec 009 T01 environment-shell readiness is accepted after read-only GitHub environment verification showed all three required shells exist."
+    ],
+    "validations": [
+      "state.json parse ok",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py",
+      "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+      "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql"
+    ]
+  },
+  "t01_environment_shell_security_review": {
+    "reviewer": "Trinity",
+    "date": "2026-05-10",
+    "verdict": "ACCEPTED",
+    "scope": "Spec 009 T01 GitHub Environment shell readiness only; no live deployment, workflow dispatch, Azure mutation, secret read, or environment secret/variable inspection.",
+    "accepted_reason": "Read-only GitHub environment validation confirms lab-live-azure-deploy, lab-live-azure-smoke, and lab-live-azure-ops exist; Tank evidence states no secrets, variables, live identifiers, or token values were created or printed, and reviewer binding was intentionally deferred until identities are safely confirmed.",
+    "t02_blockers": [
+      "Required reviewer/approval gates for Tank, Trinity, and Morpheus must be bound only after safe GitHub identity mapping is confirmed.",
+      "Environment-scoped secrets and variables must be configured outside the repository without printing values or committing identifiers.",
+      "Entra federated credentials must be configured for the three GitHub OIDC environment subjects using the api://AzureADTokenExchange audience.",
+      "Deploy, smoke, and lifecycle identities must remain separate or equivalently constrained, with lifecycle limited to stop/start/scale and no deploy/apply/destroy/delete permissions.",
+      "Zero-mutation protected workflow/OIDC checks must pass before any live mutation, live deployment, or success claim."
+    ],
+    "validations": [
+      "state.json parse ok",
+      "python tools\\ci\\m9_github_environment_check.py --repo AshleyHollis/agentic-identity-lab",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py"
+    ],
+    "review_artifact": ".squad\\decisions\\inbox\\trinity-m9-github-environment-shell-security-review.md"
+  },
+  "t02_reviewer_gate_review": {
+    "reviewer": "Trinity",
+    "date": "2026-05-10",
+    "verdict": "ACCEPTED AS FAR AS POSSIBLE - blocked external prerequisites remain",
+    "scope": "Spec 009 T02 reviewer gate and environment inventory readiness only; no live deployment, workflow dispatch, GitHub/Azure mutation, secret/env value read, or live identifier disclosure.",
+    "accepted_reason": "Read-only GitHub metadata confirms required reviewers on all three protected environments for AshleyHollis with prevent_self_review=false; safe local validators pass; environment inventory absence and Entra federation discovery gaps are external setup blockers rather than repo artifact defects.",
+    "accepted_pieces": [
+      "All three protected GitHub Environments exist.",
+      "All three environments report required_reviewers protection.",
+      "Reviewer login AshleyHollis is configured on all three environments.",
+      "prevent_self_review=false is configured for one-human lab operation.",
+      "Placeholder metadata visibility is available without exposing values.",
+      "Environment-scoped placeholder names are absent and correctly treated as blockers.",
+      "Microsoft.App provider readiness is already verified by Tank evidence.",
+      "Deeper non-mutating Entra discovery found no required environment-subject federation matches, confirming federation remains externally blocked."
+    ],
+    "rejected_pieces": [],
+    "remaining_t02_blockers": [
+      "Configure required environment-scoped secret and variable names outside the repository without printing values or committing identifiers.",
+      "Provide/configure live Entra app/client identifiers through protected environment scope only.",
+      "Configure Entra federated credentials for deploy, smoke, and ops GitHub OIDC environment subjects with audience api://AzureADTokenExchange.",
+      "Verify deploy, smoke, and lifecycle identity separation or equivalent least-privilege constraints.",
+      "Confirm lifecycle identity remains stop/start/scale scoped and cannot deploy, apply, destroy, or delete resources.",
+      "Run protected OIDC/zero-mutation checks after placeholders and federation exist."
+    ],
+    "remaining_t04_blockers": [
+      "T02 runtime OIDC verification readiness is still blocked.",
+      "Zero-mutation deploy workflow dispatch has not run and must use mutation flags disabled.",
+      "Protected environment approval must occur through the configured reviewer gate.",
+      "No live deployment, Terraform apply, rollout, or live success claim is allowed until zero-mutation rehearsal passes."
+    ],
+    "validations": [
+      "state.json parse ok",
+      "python tools\\ci\\m9_github_environment_check.py --repo AshleyHollis/agentic-identity-lab",
+      "read-only gh api environment metadata query for required_reviewers on all three environments",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py",
+      "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+      "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql"
+    ],
+    "review_artifact": ".squad\\decisions\\inbox\\trinity-m9-t02-reviewer-gate-review.md"
+  },
+  "t02_entra_discovery_review": {
+    "reviewer": "Trinity",
+    "date": "2026-05-10",
+    "verdict": "ACCEPTED PARTIAL / BLOCKED",
+    "scope": "Review of Tank redacted Entra discovery and GitHub environment inventory only; no GitHub/Azure mutation, workflow dispatch, secret/env value read, live deployment, token read, endpoint read, tenant ID read, or subscription ID read.",
+    "accepted_reason": "Tank performed the safe non-mutating discovery that is possible without external identifier values and found no required environment-subject matches on discovered candidates, so the remaining work is external configuration rather than artifact remediation.",
+    "remaining_blockers": [
+      "Configure environment-scoped placeholders outside the repository without printing values.",
+      "Confirm or create explicit deploy, smoke, and ops Entra app identities outside the repository.",
+      "Bind federated credentials for all three required GitHub Environment subjects using the required token-exchange audience.",
+      "Keep lifecycle identity constrained to stop/start/scale and unable to deploy, apply, destroy, or delete resources.",
+      "Re-run protected zero-mutation OIDC/workflow validation before any live mutation or success claim."
+    ],
+    "review_artifact": ".squad\\decisions\\inbox\\trinity-m9-entra-discovery-review.md"
+  },
+  "t02_oidc_binding_review": {
+    "reviewer": "Trinity",
+    "date": "2026-05-11",
+    "verdict": "ACCEPTED PARTIAL / BLOCKED",
+    "scope": "Spec 009 T02 OIDC binding review only; no GitHub/Azure mutation, workflow dispatch, secret/env value read, live deployment, token read, endpoint read, tenant ID print, subscription ID print, client ID print, or object ID print.",
+    "accepted_pieces": [
+      "Required protected GitHub Environments exist.",
+      "Required environment-scoped identity secret names are present for deploy, smoke, and ops.",
+      "Tank redacted evidence states deploy/smoke/ops lab Entra apps and service principals exist.",
+      "Tank redacted evidence states exact GitHub Environment federated credential subjects are bound with audience api://AzureADTokenExchange."
+    ],
+    "rejected_pieces": [],
+    "remaining_t02_blockers": [
+      "Provide deterministic lab RBAC scope variables without exposing values: AZURE_RESOURCE_GROUP and, if separate, APIM_RESOURCE_GROUP.",
+      "Bind least-privilege role assignments at lab resource-group or narrower scope for deploy, smoke, and ops identities.",
+      "Prove lifecycle/ops identity remains stop/start/scale scoped and cannot deploy, apply, destroy, or delete resources.",
+      "Configure required runtime environment variable names outside the repository without exposing values.",
+      "Run protected zero-mutation OIDC contract validation after RBAC/runtime scope is configured."
+    ],
+    "remaining_t04_blockers": [
+      "T02 must close or receive an explicit reviewed exception for zero-mutation rehearsal prerequisites.",
+      "Protected manual dispatch has not run for m8-live-oidc-contract.yml.",
+      "Protected manual dispatch has not run for m8-deploy-live.yml with mutation flags disabled.",
+      "Protected environment approval must occur through the configured reviewer gate.",
+      "No live deploy, Terraform apply, rollout, smoke success claim, or endpoint evidence is allowed until zero-mutation rehearsal passes."
+    ],
+    "validations": [
+      "state.json parse ok",
+      "python tools\\ci\\m9_github_environment_check.py --repo AshleyHollis/agentic-identity-lab",
+      "read-only GitHub Environment secret-name and variable-name metadata query for all three protected environments",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py",
+      "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+      "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql",
+      "redacted Azure CLI OIDC verification attempt did not complete because az is unavailable in this shell; no identifiers printed"
+    ],
+    "review_artifact": ".squad\\decisions\\inbox\\trinity-m9-oidc-binding-review.md"
+  },
+  "t02_rg_rbac_review": {
+    "reviewer": "Trinity",
+    "date": "2026-05-11",
+    "verdict": "RG/RBAC PORTION ACCEPTED; T02 ACCEPTED PARTIAL / BLOCKED",
+    "scope": "Spec 009 T02 deterministic resource-group, RG/location variable-name presence, and RG-scoped RBAC binding review only; no GitHub/Azure mutation, workflow dispatch, secret/env value read, live deployment, token read, endpoint read, tenant ID print, subscription ID print, client ID print, object ID print, or resource ID print.",
+    "accepted_pieces": [
+      "Deterministic lab resource group scope and location are established for the ACA lab.",
+      "Protected environment variable names AZURE_LOCATION, AZURE_RESOURCE_GROUP_NAME, AZURE_RESOURCE_GROUP, and APIM_RESOURCE_GROUP are present on deploy/smoke/ops environments.",
+      "Required identity secret names remain present on deploy/smoke/ops environments.",
+      "Tank redacted evidence states deploy, smoke, and ops RBAC role assignments are bound at resource-group scope.",
+      "Ops/lifecycle role set is consistent with stop/start/scale operations and does not include broad deploy/apply/destroy/delete roles in reviewed evidence."
+    ],
+    "rejected_pieces": [],
+    "remaining_t02_blockers": [
+      "Configure required runtime workflow variables outside the repository without exposing values.",
+      "Run protected zero-mutation OIDC contract dispatch.",
+      "Run protected zero-mutation deploy dispatch with mutation flags disabled.",
+      "Do not accept live deployment, Terraform apply, rollout, live smoke success, endpoint evidence, or mutation claims until zero-mutation rehearsal passes."
+    ],
+    "remaining_t04_blockers": [
+      "T02 must close or receive an explicit reviewed exception for zero-mutation rehearsal prerequisites.",
+      "Protected manual dispatch approval must occur through the configured GitHub Environment reviewer gate.",
+      "m8-live-oidc-contract.yml protected zero-mutation/read-only run has not completed.",
+      "m8-deploy-live.yml protected zero-mutation run with mutation flags disabled has not completed.",
+      "Runtime variable readiness must be sufficient for the selected zero-mutation path without printing endpoint or identifier values."
+    ],
+    "validations": [
+      "state.json parse ok",
+      "python tools\\ci\\m9_github_environment_check.py --repo AshleyHollis/agentic-identity-lab",
+      "read-only GitHub Environment metadata query for deploy/smoke/ops secret names and variable names only",
+      "python tools\\ci\\public_safe_validation.py",
+      "python tools\\telemetry\\validate_m8_kql_contract.py",
+      "python tools\\ci\\m8_browser_smoke_harness.py --mode static",
+      "python tools\\ci\\m8_smoke_trace_contract.py validate --workflow-file .github\\workflows\\m8-smoke-trace.yml --positive-kql tools\\telemetry\\kql\\m8-positive-chain.kql --negative-kql tools\\telemetry\\kql\\m8-negative-leakage.kql"
+    ],
+    "review_artifact": ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md"
+  }
+}

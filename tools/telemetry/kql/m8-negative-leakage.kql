@@ -1,0 +1,24 @@
+// M8 negative leakage contract (public-safe, parameterized at runtime)
+// forbidden claim keys include literal markers: "oid", "sub", "email", "upn", "preferred_username", "name", "given_name", "family_name"
+let lookback = 30m;
+let role_names = dynamic(["apim", "bff", "agent-execution", "mcp-protected-api"]);
+let forbidden = dynamic([
+  "authorization", "bearer ", "eyj", "cookie", "set-cookie", "access_token", "refresh_token", "id_token",
+  "\"oid\"", "\"sub\"", "\"email\"", "\"upn\"", "\"preferred_username\"",
+  "\"name\"", "\"given_name\"", "\"family_name\"", "tracestate"
+]);
+let req = union isfuzzy=true requests, AppRequests
+| where timestamp > ago(lookback) and cloud_RoleName in (role_names)
+| extend signal="requests", payload=tostring(pack_all());
+let dep = union isfuzzy=true dependencies, AppDependencies
+| where timestamp > ago(lookback) and cloud_RoleName in (role_names)
+| extend signal="dependencies", payload=tostring(pack_all());
+let trc = union isfuzzy=true traces, AppTraces
+| where timestamp > ago(lookback) and cloud_RoleName in (role_names)
+| extend signal="traces", payload=tostring(pack_all());
+let logs = union isfuzzy=true AppTraces, ContainerAppConsoleLogs_CL
+| where timestamp > ago(lookback)
+| extend signal="logs", payload=tostring(pack_all());
+union req, dep, trc, logs
+| where tolower(payload) has_any (forbidden)
+| project timestamp, signal, cloud_RoleName, operation_Id, payload

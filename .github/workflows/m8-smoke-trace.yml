@@ -1,0 +1,208 @@
+name: M8 Smoke + Trace (Protected Manual Scaffold)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_slug:
+        description: "Placeholder environment selector (example: agentidlab-live)"
+        required: true
+        default: "agentidlab-live"
+      deployment_label:
+        description: "Deploy label/metadata from m8-deploy-live (optional)"
+        required: false
+        default: ""
+      live_azure_tests:
+        description: "Must be true to run protected smoke/trace workflow"
+        required: true
+        default: false
+        type: boolean
+      run_live_azure_checks:
+        description: "Allow live browser+Azure Monitor commands in protected scope"
+        required: false
+        default: false
+        type: boolean
+      kql_lookback:
+        description: "KQL lookback window for trace verification"
+        required: false
+        default: "30m"
+  workflow_call:
+    inputs:
+      environment_slug:
+        required: true
+        type: string
+      deployment_label:
+        required: false
+        type: string
+        default: ""
+      live_azure_tests:
+        required: true
+        type: boolean
+      run_live_azure_checks:
+        required: false
+        type: boolean
+        default: false
+      kql_lookback:
+        required: false
+        type: string
+        default: "30m"
+    secrets:
+      AZURE_CLIENT_ID_SMOKE:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-smoke:
+    name: Preflight smoke contract
+    runs-on: ubuntu-latest
+    environment: lab-live-azure-smoke
+    env:
+      LIVE_AZURE_TESTS: ${{ inputs.live_azure_tests }}
+    steps:
+      - name: Enforce protected smoke opt-in
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.environment_slug }}"
+          if [[ "${LIVE_AZURE_TESTS}" != "true" ]]; then
+            echo "M8 smoke/trace requires live_azure_tests=true."
+            exit 1
+          fi
+          {
+            echo "### M8 smoke preflight"
+            echo ""
+            echo "- environment_slug: ${{ inputs.environment_slug }}"
+            echo "- deployment_label: ${{ inputs.deployment_label || '<none>' }}"
+            echo "- run_live_azure_checks: ${{ inputs.run_live_azure_checks }}"
+            echo "- LIVE_AZURE_TESTS: ${LIVE_AZURE_TESTS}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  browser-smoke-harness:
+    name: Canonical browser smoke harness wiring
+    runs-on: ubuntu-latest
+    needs: preflight-smoke
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate SPA -> APIM -> BFF -> Agent -> MCP wiring (static/local)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/ci/m8_browser_smoke_harness.py \
+            --mode static \
+            --output-json m8-browser-smoke-harness.json
+
+      - name: Upload harness summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-browser-smoke-harness
+          path: m8-browser-smoke-harness.json
+          retention-days: 3
+          if-no-files-found: error
+
+  trace-contract-static:
+    name: Trace contract static verification
+    runs-on: ubuntu-latest
+    needs: preflight-smoke
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate workflow + KQL contract coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/telemetry/validate_m8_kql_contract.py
+          python tools/ci/m8_smoke_trace_contract.py validate \
+            --workflow-file .github/workflows/m8-smoke-trace.yml \
+            --positive-kql tools/telemetry/kql/m8-positive-chain.kql \
+            --negative-kql tools/telemetry/kql/m8-negative-leakage.kql
+
+  live-smoke-trace:
+    name: Live browser smoke + trace check (opt-in)
+    runs-on: ubuntu-latest
+    needs:
+      - browser-smoke-harness
+      - trace-contract-static
+    if: ${{ inputs.run_live_azure_checks }}
+    environment: lab-live-azure-smoke
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_SMOKE }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      LIVE_AZURE_TESTS: ${{ inputs.live_azure_tests }}
+      KQL_LOOKBACK: ${{ inputs.kql_lookback }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate smoke identity placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AZURE_CLIENT_ID}"
+          test -n "${AZURE_TENANT_ID}"
+          test -n "${AZURE_SUBSCRIPTION_ID}"
+          python tools/ci/m9_live_preflight.py \
+            --context smoke-identity \
+            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID
+          if [[ "${LIVE_AZURE_TESTS}" != "true" ]]; then
+            echo "Live smoke/trace execution requires LIVE_AZURE_TESTS=true."
+            exit 1
+          fi
+
+      - name: Azure login (OIDC smoke identity)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Canonical browser smoke command placeholder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/ci/m8_browser_smoke_harness.py \
+            --mode live \
+            --output-json m8-browser-smoke-live.json
+
+      - name: Run Azure Monitor KQL placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          echo "Replace with protected az monitor query execution using KQL files."
+          echo "[]" > artifacts/positive.json
+          echo "[]" > artifacts/negative.json
+
+      - name: Enforce trace contract hard-fail behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/ci/m8_smoke_trace_contract.py evaluate \
+            --positive-results-json artifacts/positive.json \
+            --negative-results-json artifacts/negative.json

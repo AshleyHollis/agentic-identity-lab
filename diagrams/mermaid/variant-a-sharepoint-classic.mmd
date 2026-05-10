@@ -1,8 +1,25 @@
-flowchart LR
-  User((User)) --> SP[SharePoint Classic Page]
-  User --> Entra[Entra ID]
-  Entra -->|Delegated token| SP
-  SP -->|Delegated token (aud: APIM)| APIM[API Management]
-  APIM -->|Forward user token| BFF[BFF/API]
-  BFF -->|OBO token (aud: API A)| APIA[API A]
-  APIA -->|OBO token (aud: API B)| APIB[API B]
+sequenceDiagram
+  autonumber
+  participant User as User
+  participant Page as SharePoint Classic Page
+  participant Loader as chat-loader.js
+  participant SP as _spPageContextInfo.aadTokenProviderFactory
+  participant BFF as BFF (/chat/session)
+  participant AES as Agent Execution Service
+  participant MCP as MCP Protected API
+
+  User->>Page: Open classic page
+  Page->>Loader: Load script
+  Loader->>SP: getTokenProvider().getToken(bffResourceUri)
+  SP-->>Loader: Delegated bearer token
+  Note over Loader: In-memory only; no localStorage/sessionStorage token writes
+  Loader->>Loader: Generate traceparent
+  Loader->>BFF: POST /chat/session<br/>Authorization: Bearer {token}<br/>traceparent + {display_name?}
+  Note over Loader,BFF: userId/display_name is display-only context, never identity
+  BFF->>BFF: Validate bearer token (identity source)
+  BFF->>AES: Forward request + traceparent
+  AES->>MCP: OBO call + traceparent
+  MCP-->>AES: Response
+  AES-->>BFF: Session payload
+  BFF-->>Loader: {session_id, expires_at}
+  Loader-->>Page: Render session status

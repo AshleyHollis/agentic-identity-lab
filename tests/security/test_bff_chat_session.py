@@ -125,6 +125,63 @@ def test_chat_session_requires_auth(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.status_code == 401, response.text
 
 
+def test_chat_session_display_name_requires_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """POST /chat/session with display_name but no token/fixture still returns 401."""
+    _apply_mock_env(monkeypatch)
+    monkeypatch.delenv("AUTH_FIXTURE", raising=False)
+    app = _make_bff_app()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post("/chat/session", json={"display_name": "Guest User"})
+    assert response.status_code == 401, response.text
+
+
+def test_chat_session_userid_requires_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """POST /chat/session with userId but no token/fixture still returns 401."""
+    _apply_mock_env(monkeypatch)
+    monkeypatch.delenv("AUTH_FIXTURE", raising=False)
+    app = _make_bff_app()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post("/chat/session", json={"userId": "display-only-user"})
+    assert response.status_code == 401, response.text
+
+
+def test_chat_session_accepts_display_name_but_does_not_echo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """display_name is accepted as optional context only and is not echoed in response."""
+    _apply_mock_env(monkeypatch)
+    app = _make_bff_app()
+
+    client = TestClient(app, raise_server_exceptions=True)
+    response = client.post(
+        "/chat/session",
+        headers={"X-Identity-Lab-Fixture": "delegated-user"},
+        json={"display_name": "Display Name"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "session_id" in body
+    assert "expires_at" in body
+    assert "display_name" not in body
+
+
+def test_chat_session_rejects_overlong_display_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """display_name over 255 characters is rejected by request validation."""
+    _apply_mock_env(monkeypatch)
+    app = _make_bff_app()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post(
+        "/chat/session",
+        headers={"X-Identity-Lab-Fixture": "delegated-user"},
+        json={"display_name": "a" * 256},
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_chat_session_session_id_not_derived_from_claims(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -158,24 +215,51 @@ def test_chat_session_session_id_not_derived_from_claims(
 # ---------------------------------------------------------------------------
 
 
-def test_cors_allows_localhost_origin(monkeypatch: pytest.MonkeyPatch) -> None:
-    """In AUTH_MODE=mock with no explicit CORS var, preflight allows http://localhost:3000."""
-    _apply_mock_env(monkeypatch)  # no CORS_ALLOWED_ORIGINS → defaults to localhost:3000
+def test_cors_preflight_t_sec_08_allowed_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-SEC-08: configured browser origin is accepted during CORS preflight."""
+    _apply_mock_env(
+        monkeypatch,
+        {"CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:3000,https://localhost:4321"},
+    )
     app = _make_bff_app()
 
     client = TestClient(app, raise_server_exceptions=False)
     response = client.options(
         "/chat/session",
         headers={
-            "Origin": "http://localhost:3000",
+            "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "Authorization",
+            "Access-Control-Request-Headers": "Authorization,traceparent",
         },
     )
 
-    assert response.headers.get("Access-Control-Allow-Origin") == "http://localhost:3000", (
+    assert response.headers.get("Access-Control-Allow-Origin") == "http://localhost:5173", (
         "Preflight must echo the allowed origin"
     )
+    allow_headers = response.headers.get("Access-Control-Allow-Headers", "").lower()
+    assert "traceparent" in allow_headers
+
+
+def test_cors_preflight_t_sec_09_disallowed_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-SEC-09: non-allowlisted origin is rejected during CORS preflight."""
+    _apply_mock_env(
+        monkeypatch,
+        {"CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:3000,https://localhost:4321"},
+    )
+    app = _make_bff_app()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.options(
+        "/chat/session",
+        headers={
+            "Origin": "http://localhost:9999",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Authorization,traceparent",
+        },
+    )
+
+    assert response.status_code == 400, response.text
+    assert "Access-Control-Allow-Origin" not in response.headers
 
 
 def test_cors_wildcard_rejected_at_startup(monkeypatch: pytest.MonkeyPatch) -> None:

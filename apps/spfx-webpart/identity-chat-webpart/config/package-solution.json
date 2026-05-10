@@ -1,0 +1,27 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "identity-chat-webpart-client-side-solution",
+    "id": "00000000-0000-0000-0000-000000000000",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Identity Lab",
+      "websiteUrl": "https://example.invalid",
+      "privacyUrl": "https://example.invalid/privacy",
+      "termsOfUseUrl": "https://example.invalid/terms",
+      "mpnId": "Undefined-1.0.0"
+    },
+    "webApiPermissionRequests": [
+      {
+        "resource": "api://{client-id}",
+        "scope": "access_as_user"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/identity-chat-webpart.sppkg"
+  }
+}
