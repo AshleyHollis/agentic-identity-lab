@@ -1,0 +1,37 @@
+# ILLUSTRATIVE REFERENCE ONLY — adjust image versions and ports for production
+#
+# docker/otel-collector-config.yaml
+# Minimal OpenTelemetry Collector configuration for local lab tracing.
+#
+# Pipeline: OTLP (gRPC + HTTP) → batch processor → Jaeger (via OTLP gRPC)
+#
+# Used by: docker/docker-compose.tracing.yml
+# Reference: https://opentelemetry.io/docs/collector/configuration/
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+exporters:
+  # Forward collected spans to Jaeger's OTLP gRPC receiver.
+  # Jaeger enables OTLP via COLLECTOR_OTLP_ENABLED=true in docker-compose.tracing.yml.
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]

@@ -1,0 +1,63 @@
+# ILLUSTRATIVE REFERENCE ONLY — adjust image versions and ports for production
+#
+# docker/docker-compose.tracing.yml
+# Tracing overlay — adds OpenTelemetry Collector and Jaeger for local trace visualization.
+#
+# Usage (combine with base):
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up
+#
+# When combined with docker-compose.yml via -f, Docker Compose merges the default network
+# (named "agentic-identity-lab") so that bff, agent-gateway, mcp-protected-api,
+# otel-collector, and jaeger all share one network and resolve each other by service name.
+# Services export OTLP spans to otel-collector:4317 only when this overlay is active.
+#
+# Jaeger UI: http://localhost:16686
+# OTLP gRPC endpoint (for SDK exporters): otel-collector:4317 (inside Docker network)
+#                                          localhost:4317 (from host)
+
+services:
+
+  # ── OpenTelemetry Collector ────────────────────────────────────────────────
+  otel-collector:
+    # ILLUSTRATIVE REFERENCE ONLY — adjust image versions and ports for production
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    ports:
+      - "4317:4317"   # gRPC — OTLP endpoint for SDK exporters
+      - "4318:4318"   # HTTP — alternative OTLP endpoint
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    depends_on:
+      - jaeger
+
+  # ── Jaeger all-in-one ──────────────────────────────────────────────────────
+  jaeger:
+    # ILLUSTRATIVE REFERENCE ONLY — adjust image versions and ports for production
+    image: jaegertracing/all-in-one:1.58
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  # ── Extend existing services with OTEL env vars ───────────────────────────
+  # These blocks only add environment variables; all other service config is
+  # inherited from the base docker-compose.yml.
+
+  bff:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=bff
+      - OTEL_SDK_DISABLED=false
+
+  agent-gateway:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=agent-gateway
+      - OTEL_SDK_DISABLED=false
+
+  mcp-protected-api:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=mcp-protected-api
+      - OTEL_SDK_DISABLED=false

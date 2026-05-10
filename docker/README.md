@@ -78,6 +78,31 @@ Replace `{tenant-a-id}` and `{tenant-b-id}` in the overlay before running:
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.cross-tenant.local.yml up --build
 ```
 
+### Tracing overlay (opt-in, local only)
+
+Adds an OpenTelemetry Collector and Jaeger for local trace visualization.
+No cloud credentials or external endpoints are required.
+
+```bash
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up --build
+```
+
+Once the stack is up, open **http://localhost:16686** to view the Jaeger UI.
+
+The overlay:
+- Runs `otel/opentelemetry-collector-contrib:0.104.0` on ports `4317` (gRPC) and `4318` (HTTP).
+- Runs `jaegertracing/all-in-one:1.58` with UI on port `16686`.
+- Sets `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` on `bff`, `agent-gateway`, and `mcp-protected-api`.
+- All services join the existing `agentic-identity-lab` Docker network so `otel-collector:4317` resolves by DNS.
+
+In offline/test mode (`AUTH_MODE=mock` without the tracing overlay), set `OTEL_SDK_DISABLED=true`
+to suppress OTLP export and avoid network calls during `pytest`.
+
+Collector config is in `docker/otel-collector-config.yaml`.
+
+> **Note:** Image versions and port mappings in the tracing overlay are illustrative.
+> See `docker/docker-compose.tracing.yml` for pinning guidance.
+
 ---
 
 ## Verifying Service Health
