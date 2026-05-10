@@ -14,7 +14,7 @@
   "impact": "High",
   "spec_gate_satisfied": false,
   "implementation_blocked": true,
-  "implementation_blocked_reason": "Spec-first gate: spec artifacts are complete but architectural and security review tasks (T11, T12) must complete before implementation begins. T00 (rename) is also a prerequisite.",
+  "implementation_blocked_reason": "T12 (Trinity security review) complete. T11 (Morpheus architecture review) still pending. T00 (rename) complete per commit 1993510. Implementation unblocked after T11 sign-off. T06 and T09 are unblocked by T12 and T00; T01-T05, T07-T08 await T11.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -45,10 +45,10 @@
     "ADR-M6-03": {
       "question": "Managed identity assignment strategy: user-assigned vs system-assigned per container app",
       "owner": "Tank+Trinity",
-      "status": "pending-review",
-      "decision": null,
-      "decided_by": null,
-      "decided_date": null
+      "status": "accepted",
+      "decision": "Option A — user-assigned managed identity per service. Three separate azurerm_user_assigned_identity resources (managed_identity_bff, managed_identity_agent_execution, managed_identity_mcp_protected_api). OBO permissions granted only to agent_execution identity (post-M6). APIM system-assigned MI must not substitute delegated tokens. ADR-005 created.",
+      "decided_by": "Trinity",
+      "decided_date": "2026-06-01"
     }
   },
   "task_status": {
@@ -64,7 +64,7 @@
     "T09": "pending",
     "T10": "pending",
     "T11": "pending",
-    "T12": "pending"
+    "T12": "complete"
   },
   "validation_commands": [
     "python -m pytest",
@@ -84,6 +84,7 @@
     "No terraform apply in any public CI workflow. CI validates only (fmt + validate).",
     "All placeholder values must use {tenant-id}, {subscription-id}, {resource-group} brace tokens or all-zero GUIDs only.",
     "Azure Monitor tracing is a config-only OTLP endpoint swap — no code change from M5 OTEL instrumentation.",
-    "AUTH_MODE=strict is the deployment gate: no fixture headers accepted, no mock tokens, real JWKS validation required."
+    "AUTH_MODE=strict is the deployment gate: no fixture headers accepted, no mock tokens, real JWKS validation required.",
+    "T12 (Trinity security review) complete 2026-06-01. ADR-005 accepted (user-assigned MI per service). Binding conditions: C1 — add blueprint_audience strict-mode validation in T09; C2 — APIM must not substitute delegated token with MI token in T04. T06 and T09 are unblocked. T01-T08 await T11 (Morpheus)."
   ]
 }
