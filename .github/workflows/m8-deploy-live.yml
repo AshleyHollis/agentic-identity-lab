@@ -502,11 +502,28 @@ jobs:
           )
           configuration = app["properties"]["configuration"]
           template = app["properties"]["template"]
-          configuration["ingress"]["targetPort"] = 8000
-          configuration["registries"] = [{"server": login_server, "identity": identity_id}]
-          template["containers"][0]["image"] = image
+          ingress = {
+              "external": configuration["ingress"].get("external", False),
+              "targetPort": 8000,
+              "transport": configuration["ingress"].get("transport", "Auto"),
+              "traffic": configuration["ingress"].get("traffic") or [{"latestRevision": True, "weight": 100}],
+          }
+          if "allowInsecure" in configuration["ingress"]:
+              ingress["allowInsecure"] = configuration["ingress"]["allowInsecure"]
+          containers = template["containers"]
+          containers[0]["image"] = image
+          patch = {
+              "properties": {
+                  "configuration": {
+                      "activeRevisionsMode": configuration.get("activeRevisionsMode", "Single"),
+                      "ingress": ingress,
+                      "registries": [{"server": login_server, "identity": identity_id}],
+                  },
+                  "template": {"containers": containers},
+              }
+          }
           with open(patch_file, "w", encoding="utf-8") as handle:
-              json.dump({"properties": {"configuration": configuration, "template": template}}, handle)
+              json.dump(patch, handle)
           PY
             az rest \
               --method PATCH \
