@@ -84,6 +84,9 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.strict-aca.
 
 > **Public-safe constraint:** No `terraform apply` in CI. Validation only.
 
+> **Scope boundary — M6 vs live E2E (M8):**  
+> M6 "Complete" means the Azure deployment *configuration* is validated — Terraform HCL is structurally correct, `AUTH_MODE=strict` is verified in Python, and all CI gates pass without live credentials. M6 does **not** mean the system has been deployed and tested in Azure. Live deployment and end-to-end smoke testing (browser → APIM → BFF → Agent Execution Service → MCP Protected API with real Entra tokens) are the **M8** gate, which is intentionally deferred and opt-in. See `roadmap.md` Status Dashboard for the full picture.
+
 ## Coordinator Checkpoint
 
 > **APPROVAL REQUIRED before implementation begins.**

@@ -26,6 +26,16 @@ Principles
 
 **▶ Current position: M7 — Variant client implementations (spec creation phase). M6 complete and closed.**
 
+> **Does everything eventually deploy to Azure and get verified end-to-end?**  
+> **Yes.** The intended destination is a live Azure deployment (ACA + APIM) where a real browser session drives a delegated Entra token through APIM → BFF → Agent Execution Service → MCP Protected API and all hops are smoke-tested with real Entra tokens and traces visible in Azure Monitor.  
+> The lab reaches that in two distinct steps:
+>
+> - **M6** established the *configuration and Terraform validation baseline* — infrastructure scaffolded, `AUTH_MODE=strict` verified, `terraform validate` passes. **No `terraform apply` was run; no live resources were created.** M6 proves the configuration is correct, not that the deployment works.
+> - **M8 (Live Azure E2E verification)** is the gate where a configured environment is actually deployed and the full browser → APIM → BFF → Agent Execution Service → MCP chain is smoke-tested with real Entra tokens. This milestone is explicitly opt-in and requires a private, secrets-holding environment — it cannot run from the public CI pipeline.
+> - **M7 (Variant clients)** implements the client-side delegated flows (SPFx, SPA, SharePoint classic) offline/locally. M7 clients are *necessary inputs* to the M8 E2E gate — they exercise the delegated-token acquisition path — but M7 alone does not prove live Azure deployment. M7 + a configured M6 environment together enable M8.
+>
+> **Public-repo constraint (permanent):** live credentials, tenant IDs, subscription IDs, and real Entra tokens must never be committed. M8 must be run opt-in against a private environment; its smoke-test scripts live in the repo but the secrets that drive them do not.
+
 | # | Milestone | Spec | Status | Validation |
 |---|-----------|------|--------|------------|
 | M1 | Local token validation + OBO boundaries | [Spec 001](.squad\specs\001-token-validation-and-obo\README.md) | ✅ Complete | `python -m pytest` passed |
@@ -33,10 +43,12 @@ Principles
 | M3 | APIM policy alignment | [Spec 004](.squad\specs\004-apim-policy-alignment\README.md) | ✅ Complete | pytest 56 passed; `terraform fmt` + `validate` passed |
 | M4 | Local runtime ergonomics | [Spec 005](.squad\specs\005-local-runtime-ergonomics\README.md) | ✅ Complete | Compose configs passed; `python -m pytest` 65 passed |
 | M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | ✅ Complete | `python -m pytest` 229 passed; Terraform fmt/init/validate passed; Compose tracing config passed |
-| M6 | Azure deployment baseline | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | ✅ Complete | pytest 235 passed; `terraform fmt/init/validate` passed; Compose strict-aca + tracing configs passed; no-secret scan passed |
-| M7 | Variant client implementations | *(spec not yet created)* | 📋 Roadmap — spec creation next | variant tests + `python -m pytest` |
+| M6 | Azure deployment baseline *(config + Terraform validation only — no live apply)* | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | ✅ Complete | pytest 235 passed; `terraform fmt/init/validate` passed; Compose strict-aca + tracing configs passed; no-secret scan passed |
+| M7 | Variant client implementations *(offline delegated flows; prepares clients for M8 E2E)* | *(spec not yet created)* | 📋 Roadmap — spec creation next | variant tests + `python -m pytest` |
+| M8 | Live Azure E2E verification *(opt-in; requires configured private environment)* | *(spec not yet created)* | 🔭 Future — after M7 | browser → APIM → BFF → Agent Execution Service → MCP smoke-tested with real Entra tokens; traces in Azure Monitor |
 
-> **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.
+> **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.  
+> **M8 note:** M8 is opt-in by design. Public CI cannot hold the secrets required for live deployment. Smoke-test scripts will live in this repo; the secrets-holding environment configuration does not.
 
 ---
 
@@ -190,13 +202,16 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 ---
 
-## Milestone 6 — Azure deployment baseline
+## Milestone 6 — Azure deployment baseline *(configuration + Terraform validation only)*
 
 **Goal:** Implement minimal Terraform wiring for APIM + Container Apps with managed identity ready for OBO (no secrets committed). Migrate tracing backend to Azure Monitor (OTLP endpoint swap). Apply Agent Execution Service rename (M6 Task 0).  
 **Owner agents:** Tank (Lead/Infra), Neo (Backend/Rename)  
 **Reviewers:** Morpheus, Trinity  
 **Impact:** High  
 **Status:** ✅ Complete — [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) closed. All T00–T13 tasks complete; Morpheus + Trinity post-implementation reviews accepted; final closeout validation passed 2026-06-01.
+
+> **Scope clarification — what M6 is and is not:**  
+> M6 proves that the Azure deployment *configuration* is correct. It **does not** run `terraform apply`, create live Azure resources, or smoke-test a deployed endpoint. `terraform validate` passing means the HCL is structurally sound and all required inputs are typed correctly — it is not evidence that a working deployment exists. Live deployment and E2E smoke-testing are the M8 gate.
 
 ### ✅ Done by end of M6 — what works
 
@@ -214,12 +229,16 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 ---
 
-## Milestone 7 — Variant client implementations
+## Milestone 7 — Variant client implementations *(offline delegated flows)*
 
 **Goal:** Implement first UI clients (SPFx, SharePoint classic, SPA) that exercise delegated flows.  
 **Owner agents:** Mouse, Neo  
 **Impact:** Medium  
 **Status:** 📋 Roadmap (spec not yet created)
+
+> **Scope clarification — what M7 is and is not:**  
+> M7 clients prove delegated token acquisition from the browser side. Flows are exercised locally/offline (or against a mock BFF) and validated with `python -m pytest`. M7 does **not** by itself prove live Azure deployment — even when all M7 tests pass, the chain browser → APIM → BFF → Agent Execution Service → MCP Protected API has not been smoke-tested against real Azure infrastructure. That verification is the M8 gate.  
+> M7 is a *necessary prerequisite* for M8: without working client implementations that can acquire real Entra delegated tokens, there is nothing to drive the M8 E2E smoke test.
 
 ### ✅ Done by end of M7 — what works
 
@@ -236,7 +255,32 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 ---
 
-## Cross-cutting: End-to-End Tracing
+## Milestone 8 — Live Azure E2E verification *(opt-in; requires configured private environment)*
+
+**Goal:** Deploy the M6-validated configuration to a real Azure environment and smoke-test the complete chain — browser → APIM → BFF → Agent Execution Service → MCP Protected API — with real Entra delegated tokens. Validate that traces appear in Azure Monitor end-to-end.  
+**Owner agents:** Tank (Infra/Deploy), Trinity (Security validation), Morpheus (Architecture sign-off)  
+**Reviewers:** All  
+**Impact:** High — this is the milestone that answers "does it actually work in Azure?"  
+**Status:** 🔭 Future — after M7
+
+> **Opt-in by design:** M8 cannot run from public CI. It requires a private environment holding real credentials (subscription ID, tenant ID, Entra app registrations, client secrets or federated credentials). These values must never be committed. M8 smoke-test scripts will live in this repository; the secrets-holding environment configuration does not.  
+> **Prerequisites:** M6 (Terraform config validated) + M7 (working client-side delegated token acquisition) must both be complete before M8 can be meaningfully executed.
+
+### ✅ Done by end of M8 — what works
+
+| Capability | Details |
+|-----------|---------|
+| **`terraform apply` executed** | Real Azure resources provisioned: APIM, Container Apps (BFF, Agent Execution Service, MCP Protected API), App Insights, managed identities. |
+| **Real Entra app registrations** | App registrations (BFF API, Agent Execution Service blueprint audience, MCP Protected API) created with correct scopes and OBO permissions. |
+| **Browser → APIM smoke test** | A client (SPA or SPFx from M7) acquires a real Entra delegated token, calls APIM, and receives a valid response from the full chain. |
+| **OBO chain verified live** | Agent Execution Service performs a live OBO token exchange using managed identity; MCP Protected API validates the OBO token. No fixture or mock paths used. |
+| **Azure Monitor traces** | Full W3C trace visible in Azure Monitor / Application Insights: APIM correlation ID → BFF span → Agent Execution Service span → MCP Protected API span. |
+| **Auth rejection verified** | Invalid token, wrong audience, and missing scope all produce 401s at the correct service boundary — verified against the live endpoint. |
+| **Smoke test scripts** | Runnable scripts in `tests/e2e/` (pointing at environment-variable-supplied endpoint URLs) that can be re-executed against any configured environment. |
+
+**Key files:** `tests/e2e/`, `infra/terraform/environments/single-tenant-aca/`, `docs/deployment/aca/README.md`
+
+---
 
 > **ADR:** `docs/adr/0007-end-to-end-tracing-strategy.md` · Full record: `.squad/architecture/decisions/002-end-to-end-tracing-strategy.md`
 
@@ -244,8 +288,9 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 |-------|------------------|--------------| 
 | M5 (local/mock) | BFF → Agent Execution Service → MCP Protected API (mock flows) | Jaeger UI `localhost:16686` (Docker Compose) |
 | M5 (AKS flows) | AKS Agent Gateway proxy spans (`list_tools`, `call_tool`) | Same Jaeger UI via agentgateway.dev native integration |
-| M6 (Azure) | Full deployed chain including APIM | Azure Monitor (OTLP endpoint — config-only swap) |
-| M7 (clients) | All variant client → BFF spans | Azure Monitor or Jaeger |
+| M6 (config baseline) | Full deployed chain topology designed and OTLP config documented — **not yet running live** | Azure Monitor (OTLP endpoint — config-only swap) |
+| M7 (clients) | All variant client → BFF spans (offline/local) | Jaeger (local) or Azure Monitor (if deployed) |
+| M8 (live E2E — opt-in) | Full chain live: browser → APIM → BFF → Agent Execution Service → MCP Protected API with real Entra tokens | Azure Monitor / Application Insights (live environment) |
 
 **Invariants (all phases):**
 - W3C TraceContext (`traceparent`/`tracestate`) propagated on all inter-service HTTP calls.
