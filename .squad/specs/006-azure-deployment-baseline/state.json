@@ -2,10 +2,10 @@
   "spec_id": "006",
   "slug": "azure-deployment-baseline",
   "milestone": "M6",
-  "phase": "implementation",
-  "status": "in-progress",
+  "phase": "post-implementation-review",
+  "status": "architecture-accepted",
   "created": "2026-06-01",
-  "updated": "2026-06-01",
+  "updated": "2026-06-01-morpheus-post-impl-arch-review",
   "requested_by": "Ashley Hollis",
   "owners": {
     "primary": [
@@ -59,18 +59,19 @@
   },
   "task_status": {
     "T00": "complete",
-    "T01": "pending",
-    "T02": "pending",
-    "T03": "pending",
-    "T04": "pending",
-    "T05": "pending",
-    "T06": "pending",
-    "T07": "pending",
-    "T08": "pending",
+    "T01": "complete",
+    "T02": "complete",
+    "T03": "complete",
+    "T04": "complete",
+    "T05": "complete",
+    "T06": "complete",
+    "T07": "complete",
+    "T08": "complete",
     "T09": "complete",
     "T10": "complete",
     "T11": "complete",
-    "T12": "complete"
+    "T12": "complete",
+    "T13-morpheus-post-impl": "complete"
   },
   "validation_commands": [
     "python -m pytest",
@@ -95,5 +96,12 @@
     "Azure Monitor tracing is a config-only OTLP endpoint swap — no code change from M5 OTEL instrumentation.",
     "AUTH_MODE=strict is the deployment gate: no fixture headers accepted, no mock tokens, real JWKS validation required.",
     "T12 (Trinity security review) complete 2026-06-01. ADR-005 accepted (user-assigned MI per service). Binding conditions: C1 — add blueprint_audience strict-mode validation in T09; C2 — APIM must not substitute delegated token with MI token in T04. T06 and T09 are unblocked. T01-T08 await T11 (Morpheus)."
-  ]
+  ],
+  "post_implementation_review": {
+    "morpheus": {
+      "verdict": "ACCEPTED",
+      "date": "2026-06-01",
+      "note": "All 8 focus areas confirmed. No implementation changes required. M6 cleared for Trinity final closure review."
+    }
+  }
 }
