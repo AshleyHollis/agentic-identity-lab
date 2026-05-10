@@ -59,6 +59,7 @@ resource "azurerm_container_app" "this" {
 
   lifecycle {
     ignore_changes = [
+      ingress[0].target_port,
       template[0].container[0].image,
     ]
   }

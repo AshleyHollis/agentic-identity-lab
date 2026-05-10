@@ -34,16 +34,34 @@ variable "bff_image" {
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 }
 
+variable "bff_target_port" {
+  type        = number
+  description = "BFF container ingress target port. The live workflow may use 80 for the public bootstrap placeholder before image rollout switches to 8000."
+  default     = 8000
+}
+
 variable "agent_execution_image" {
   type        = string
   description = "Agent Execution Service container image. Set at deploy time."
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 }
 
+variable "agent_execution_target_port" {
+  type        = number
+  description = "Agent Execution Service container ingress target port. The live workflow may use 80 for the public bootstrap placeholder before image rollout switches to 8000."
+  default     = 8000
+}
+
 variable "mcp_image" {
   type        = string
   description = "MCP Protected API container image. Set at deploy time."
   default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+}
+
+variable "mcp_target_port" {
+  type        = number
+  description = "MCP Protected API container ingress target port. The live workflow may use 80 for the public bootstrap placeholder before image rollout switches to 8000."
+  default     = 8000
 }
 
 variable "otel_endpoint" {

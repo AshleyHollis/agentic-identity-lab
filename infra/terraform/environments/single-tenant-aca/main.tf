@@ -79,6 +79,7 @@ module "container_app_bff" {
   image                         = var.bff_image
   managed_identity_id           = module.managed_identity_bff.identity_id
   external_enabled              = true
+  target_port                   = var.bff_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
     SERVICE_NAME      = "identity-lab-bff"
@@ -99,6 +100,7 @@ module "container_app_agent_execution" {
   container_apps_environment_id = module.container_apps_env.environment_id
   image                         = var.agent_execution_image
   managed_identity_id           = module.managed_identity_agent_execution.identity_id
+  target_port                   = var.agent_execution_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
     SERVICE_NAME            = "identity-lab-agent-execution"
@@ -122,6 +124,7 @@ module "container_app_mcp_protected_api" {
   container_apps_environment_id = module.container_apps_env.environment_id
   image                         = var.mcp_image
   managed_identity_id           = module.managed_identity_mcp_protected_api.identity_id
+  target_port                   = var.mcp_target_port
   otel_endpoint                 = var.otel_endpoint
   env_vars = {
     SERVICE_NAME      = "identity-lab-mcp-protected-api"

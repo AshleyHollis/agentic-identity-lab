@@ -338,8 +338,11 @@ jobs:
           tenant_id = "${AZURE_TENANT_ID}"
           resource_group_name = "${AZURE_RESOURCE_GROUP}"
           bff_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+          bff_target_port = 80
           agent_execution_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+          agent_execution_target_port = 80
           mcp_image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+          mcp_target_port = 80
           apim_sku_name = "Consumption_0"
           auth_issuer = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0"
           auth_jwks_url = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys"
@@ -362,16 +365,23 @@ jobs:
           )
           for app_name in "${!app_to_address[@]}"; do
             address="${app_to_address[$app_name]}"
+            in_state=false
             if terraform -chdir="${workdir}" state show "${address}" >/dev/null 2>&1; then
-              continue
+              in_state=true
             fi
             app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv 2>/dev/null || true)"
             if [[ -z "${app_id}" ]]; then
               continue
             fi
             provisioning_state="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.provisioningState -o tsv)"
-            if [[ "${provisioning_state}" == "Failed" ]]; then
+            if [[ "${provisioning_state}" == "Failed" || "${provisioning_state}" == "InProgress" ]]; then
+              if [[ "${in_state}" == "true" ]]; then
+                terraform -chdir="${workdir}" state rm "${address}"
+              fi
               az containerapp delete --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --yes --output none
+              continue
+            fi
+            if [[ "${in_state}" == "true" ]]; then
               continue
             fi
             app_id="${app_id/\/providers\/Microsoft.App\/containerapps\//\/providers\/Microsoft.App\/containerApps\/}"
@@ -472,11 +482,58 @@ jobs:
               --server "${login_server}" \
               --identity "${identity_id}" \
               --output none
-            az containerapp update \
-              --name "${app_name}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --image "${app_to_image[$app_name]}" \
+            app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
+            patch_file="$(mktemp)"
+            python - "$app_name" "${AZURE_RESOURCE_GROUP}" "${app_to_image[$app_name]}" "$patch_file" <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          app_name, resource_group, image, patch_file = sys.argv[1:5]
+          app = json.loads(
+              subprocess.check_output(
+                  [
+                      "az",
+                      "containerapp",
+                      "show",
+                      "--name",
+                      app_name,
+                      "--resource-group",
+                      resource_group,
+                      "--output",
+                      "json",
+                  ],
+                  text=True,
+              )
+          )
+          configuration = app["properties"]["configuration"]
+          template = app["properties"]["template"]
+          configuration["ingress"]["targetPort"] = 8000
+          template["containers"][0]["image"] = image
+          with open(patch_file, "w", encoding="utf-8") as handle:
+              json.dump({"properties": {"configuration": configuration, "template": template}}, handle)
+          PY
+            az rest \
+              --method PATCH \
+              --url "https://management.azure.com${app_id}?api-version=2024-03-01" \
+              --body "@${patch_file}" \
               --output none
+            rm -f "${patch_file}"
+            for attempt in {1..40}; do
+              provisioning_state="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.provisioningState -o tsv)"
+              if [[ "${provisioning_state}" == "Succeeded" ]]; then
+                break
+              fi
+              if [[ "${provisioning_state}" == "Failed" ]]; then
+                echo "Container App ${app_name} failed during image rollout." >&2
+                exit 1
+              fi
+              sleep 15
+            done
+            if [[ "${provisioning_state}" != "Succeeded" ]]; then
+              echo "Container App ${app_name} did not finish image rollout in time." >&2
+              exit 1
+            fi
           done
           echo "Rolled out protected service images to ACA using managed identity AcrPull." >> "$GITHUB_STEP_SUMMARY"
 
