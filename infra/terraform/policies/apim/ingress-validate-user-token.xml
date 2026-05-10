@@ -8,7 +8,7 @@
       Delegated user token validation (placeholder values only).
       Replace audience/scope per API:
         - BFF: aud=api://00000000-0000-0000-0000-000000000101, scp=mcp.access
-        - Agent gateway: aud=api://00000000-0000-0000-0000-000000000102, scp=mcp.access|mcp.write
+        - Agent Execution Service: aud=api://00000000-0000-0000-0000-000000000102, scp=mcp.access|mcp.write
       Keep single-audience validation (avoid multi-audience tokens).
     -->
     <validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" require-scheme="Bearer">
@@ -35,6 +35,12 @@
     </validate-jwt>
 
     <!-- Preserve inbound Authorization for delegated flow; app performs OBO later. -->
+    <!--
+      SECURITY BINDING C2 (Trinity T12, ADR-M6-03):
+      APIM system-assigned managed identity MUST NOT be injected as the Authorization header
+      sent to BFF. The delegated user token validated above passes through to BFF UNCHANGED.
+      OBO token exchange is performed exclusively by Agent Execution Service — NOT by APIM.
+    -->
     <set-header name="Authorization" exists-action="override">
       <value>@(context.Request.Headers.GetValueOrDefault("Authorization", ""))</value>
     </set-header>

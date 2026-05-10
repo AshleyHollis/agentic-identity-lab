@@ -3,9 +3,9 @@
   "slug": "azure-deployment-baseline",
   "milestone": "M6",
   "phase": "post-implementation-review",
-  "status": "architecture-accepted",
+  "status": "post-implementation-security-review-complete",
   "created": "2026-06-01",
-  "updated": "2026-06-01-morpheus-post-impl-arch-review",
+  "updated": "2026-06-01-trinity-post-impl-security-review",
   "requested_by": "Ashley Hollis",
   "owners": {
     "primary": [
@@ -102,6 +102,27 @@
       "verdict": "ACCEPTED",
       "date": "2026-06-01",
       "note": "All 8 focus areas confirmed. No implementation changes required. M6 cleared for Trinity final closure review."
+    },
+    "trinity": {
+      "verdict": "ACCEPTED",
+      "date": "2026-06-01",
+      "checks": {
+        "C1_blueprint_audience_strict_mode": "PASS — config.py guard raises ValueError on placeholder; 6 focused tests cover all cases; mock/disabled unaffected.",
+        "C2_apim_no_mi_auth_substitution": "PASS — binding comment in apim/main.tf, ingress-validate-user-token.xml, docker-compose.strict-aca.yml, and aca/README.md; token pass-through verified.",
+        "no_secrets_in_terraform_env_docs": "PASS — no real GUIDs in 18 M6 source files; brace-token and all-zero placeholders only; providers.tf reads IDs from variables.",
+        "auth_mode_strict_hardcoded": "PASS — container-app module hardcodes AUTH_MODE=strict; not a variable; mock path unreachable in ACA deployment.",
+        "managed_identity_separation": "PASS — three distinct user-assigned identities; OBO permissions bound exclusively to agent_execution; role assignments commented placeholders.",
+        "otlp_no_secrets_no_pii": "PASS — no secrets in OTLP config; PII/token span rules documented; OTEL_SDK_DISABLED=true in test environments.",
+        "agent_execution_naming": "PASS — consistent after two tiny doc corrections (see files_changed)."
+      },
+      "files_changed": [
+        "infra/terraform/policies/apim/ingress-validate-user-token.xml — 'Agent gateway' corrected to 'Agent Execution Service' (NFR-07)",
+        "config/env/agent-execution.env.example — OTLP URL aligned to otel.monitor.azure.com/v1/traces (FR-07)",
+        "config/env/bff.env.example — OTLP URL aligned to otel.monitor.azure.com/v1/traces (FR-07)",
+        "config/env/mcp-protected-api.env.example — OTLP URL aligned to otel.monitor.azure.com/v1/traces (FR-07)",
+        "docs/deployment/azure-container-apps.md — OTLP URL aligned to otel.monitor.azure.com/v1/traces (FR-07)"
+      ],
+      "note": "All seven security checks passed. Two tiny doc-only corrections applied (no implementation change). M6 READY FOR MORPHEUS FINAL CLOSURE."
     }
   }
 }

@@ -22,7 +22,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317   # Jaeger or OTEL collector
 Set the env var in each container app to the Azure Monitor OTLP ingestion endpoint for
 your Log Analytics workspace region:
 ```
-OTEL_EXPORTER_OTLP_ENDPOINT=https://{region}.otelgw.azure.com
+OTEL_EXPORTER_OTLP_ENDPOINT=https://{region}.otel.monitor.azure.com/v1/traces
 ```
 Replace `{region}` with your workspace region (e.g. `eastus`, `westeurope`).  The endpoint
 is public; **do not embed instrumentation keys or connection strings in env examples**.
