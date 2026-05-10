@@ -1,0 +1,16 @@
+[project]
+name = "identity-lab-mcp-protected-api"
+version = "0.1.0"
+description = "Identity Lab MCP protected API FastAPI service."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-instrumentation-fastapi>=0.41b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
