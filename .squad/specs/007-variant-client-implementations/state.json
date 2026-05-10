@@ -1,0 +1,151 @@
+{
+  "spec_id": "007",
+  "slug": "variant-client-implementations",
+  "milestone": "M7",
+  "phase": "spec.feature",
+  "status": "spec-ready",
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "requested_by": "Ashley Hollis",
+  "owners": {
+    "primary": [
+      "Mouse",
+      "Neo"
+    ],
+    "reviewers": [
+      "Morpheus",
+      "Trinity"
+    ]
+  },
+  "impact": "High",
+  "spec_gate_satisfied": true,
+  "implementation_blocked": true,
+  "implementation_blocked_reason": "T12 (Trinity security review) must complete before any implementation begins. T11 (Morpheus architecture review) is complete and accepted.",
+  "artifacts": {
+    "README.md": "complete",
+    "goals.md": "complete",
+    "research.md": "complete",
+    "requirements.md": "complete",
+    "design.md": "complete",
+    "tasks.md": "complete",
+    "state.json": "complete",
+    ".progress.md": "complete"
+  },
+  "variants": {
+    "spa-public-client": {
+      "path": "apps/spa-public-client/react-vite/",
+      "priority": 1,
+      "token_flow": "MSAL browser PKCE",
+      "cache_storage": "sessionStorage",
+      "status": "not-started"
+    },
+    "sharepoint-classic": {
+      "path": "apps/sharepoint-classic/chat-loader-js/",
+      "priority": 2,
+      "token_flow": "Pluggable token provider / _spPageContextInfo.aadTokenProviderFactory",
+      "cache_storage": "in-memory only (no storage API)",
+      "status": "not-started"
+    },
+    "spfx-webpart": {
+      "path": "apps/spfx-webpart/identity-chat-webpart/",
+      "priority": 3,
+      "token_flow": "AadHttpClient via context.aadHttpClientFactory",
+      "cache_storage": "SPFx runtime managed (no localStorage by web part)",
+      "status": "not-started"
+    }
+  },
+  "identity_invariant": "userId and any body field are display/context only. Identity is established solely by the validated bearer token at the BFF.",
+  "adrs": {
+    "ADR-M7-01": {
+      "question": "MSAL token cache storage location",
+      "owner": "Mouse",
+      "status": "confirmed",
+      "confirmed_by": "Morpheus T11",
+      "decision": "Option A -- sessionStorage (not localStorage). Survives tab refresh; not cross-tab readable. localStorage is prohibited.",
+      "pending_confirmation": ["T12"]
+    },
+    "ADR-M7-02": {
+      "question": "Classic loader token provider interface: pluggable vs hard-coded",
+      "owner": "Mouse",
+      "status": "confirmed",
+      "confirmed_by": "Morpheus T11",
+      "decision": "Option A -- pluggable callback. Default implementation uses _spPageContextInfo.aadTokenProviderFactory. Stub provider for local mock dev.",
+      "pending_confirmation": []
+    },
+    "ADR-M7-03": {
+      "question": "Azure E2E gate timing: M7 vs separate gate",
+      "owner": "Mouse",
+      "status": "confirmed",
+      "confirmed_by": "Morpheus T11",
+      "decision": "Option A -- defer to M8 (per roadmap.md). M7 stays local/mock only. Live tests require opt-in LIVE_AZURE_TESTS env flag; never in public CI defaults. OQ5 closed: gate is M8.",
+      "pending_confirmation": []
+    },
+    "ADR-M7-04": {
+      "question": "OQ1: Optional display_name in /chat/session request body",
+      "owner": "Morpheus",
+      "status": "accepted",
+      "confirmed_by": "Morpheus T11",
+      "decision": "Option B -- accept optional display_name: str | None = None. Display hint only. Not used for auth, not echoed in response, not forwarded downstream. Binding constraints documented in ADR 0009 (docs/adr/0009-m7-display-name-bff-body-field.md). OQ1 closed.",
+      "pending_confirmation": [],
+      "formal_adr": "docs/adr/0009-m7-display-name-bff-body-field.md"
+    }
+  },
+  "task_status": {
+    "T11": "complete",
+    "T12": "pending",
+    "T00": "pending",
+    "T01": "pending",
+    "T02": "pending",
+    "T03": "pending",
+    "T04": "pending",
+    "T05": "pending",
+    "T06": "pending",
+    "T07": "pending",
+    "T08": "pending",
+    "T09": "pending",
+    "T10": "pending",
+    "T13": "pending"
+  },
+  "validation_commands": [
+    "python -m pytest",
+    "cd apps/spa-public-client/react-vite && npm ci && npm run build",
+    "cd apps/sharepoint-classic/chat-loader-js && npm ci && npm run lint",
+    "cd apps/spfx-webpart/identity-chat-webpart && npm ci && gulp build",
+    "docker compose -f docker/docker-compose.yml config --quiet"
+  ],
+  "public_safe_constraints": [
+    "No real tenant IDs, client IDs, subscription IDs, secrets, or live tokens in any committed file.",
+    "All placeholder values use {tenant-id}, {client-id}, {bff-api-scope} brace tokens or all-zero GUIDs.",
+    "No live Azure tests in public CI. LIVE_AZURE_TESTS=true opt-in required for E2E tests."
+  ],
+  "out_of_scope_m7": [
+    "terraform apply / live Azure deployment",
+    ".NET or Node Agent Execution Service runtime variants",
+    "Next.js SPA variant (apps/spa-public-client/nextjs/ — placeholder only)",
+    "Production SharePoint tenant deployment",
+    "Multi-tenant Entra app registration"
+  ],
+  "azure_e2e_gate": {
+    "name": "M8",
+    "status": "not-started",
+    "description": "Dedicated post-M7 milestone gate for live Azure E2E verification: client -> APIM -> BFF -> Agent Execution Service -> MCP with real Entra tokens. Formerly referenced as M7-AzureVerify; aligned to roadmap.md which names this milestone M8.",
+    "opt_in_flag": "LIVE_AZURE_TESTS=true",
+    "ci_default": false
+  },
+  "dependencies": {
+    "blocking": [
+      "006-azure-deployment-baseline"
+    ],
+    "notes": "M7 depends on M6 ACA baseline for future Azure E2E verification. All three client variants depend on the existing BFF /chat/session endpoint (M4) and JWKS validation (M1)."
+  },
+  "notes": [
+    "Spec 007 created by Mouse (Frontend/SharePoint/TypeScript) as M7 spec-first gate artifact.",
+    "Implementation is BLOCKED pending T12 (Trinity) security review sign-off. T11 (Morpheus) is complete and accepted.",
+    "Backend (BFF, Agent Execution Service, MCP Protected API) unchanged in M7 except minor BFF CORS + optional display_name field.",
+    "Runtime language variants (.NET/Node Agent Execution Service) are explicitly out of M7 scope -- future milestone.",
+    "Azure E2E gate is M8 per roadmap.md (OQ5 closed). Not a M7 sub-gate. Not part of M7 implementation.",
+    "Directive from copilot-directive-20260510202925.md honored: roadmap updated to include Azure E2E gate.",
+    "T11 implementation conditions (binding on implementation tasks): (1) T00 must add 'traceparent' to BFF CORS allow_headers. (2) T01: display_name must not be echoed in session response; negative test required; max-length guard recommended. (3) T03: classic loader must not use userId as auth signal; identity invariant comment required at BFF call site.",
+    "T11 sign-off: Morpheus, Lead/Architect, 2026-06-01. Verdict: ACCEPTED. Formal ADR created: docs/adr/0009-m7-display-name-bff-body-field.md."
+  ]
+}
