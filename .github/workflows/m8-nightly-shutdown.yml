@@ -40,6 +40,9 @@ jobs:
       APIM_SERVICE_NAME: ${{ vars.APIM_SERVICE_NAME }}
       APIM_STOP_SUPPORTED: ${{ vars.APIM_STOP_SUPPORTED }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Preflight contract checks
         shell: bash
         run: |

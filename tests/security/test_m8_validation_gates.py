@@ -52,6 +52,14 @@ def test_start_resume_workflow_has_dry_run_guardrails() -> None:
     assert "inputs.run_readiness_probe && !inputs.dry_run" in start_resume
 
 
+def test_lifecycle_workflows_checkout_before_repo_scripts() -> None:
+    for workflow_name in ("m8-start-resume.yml", "m8-nightly-shutdown.yml"):
+        workflow = _read(ROOT / ".github" / "workflows" / workflow_name)
+        checkout_index = workflow.index("uses: actions/checkout@v4")
+        preflight_index = workflow.index("python tools/ci/m9_live_preflight.py")
+        assert checkout_index < preflight_index
+
+
 def test_m8_kql_contract_files_have_required_coverage() -> None:
     offenders = run_kql_checks()
     assert offenders == [], "KQL contract offenders found:\n" + "\n".join(offenders)

@@ -43,6 +43,9 @@ jobs:
       APIM_SERVICE_NAME: ${{ vars.APIM_SERVICE_NAME }}
       M8_READINESS_URL: ${{ vars.M8_READINESS_URL }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Preflight contract checks
         shell: bash
         run: |
