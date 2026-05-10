@@ -1,0 +1,52 @@
+<policies>
+  <inbound>
+    <base />
+    <include-fragment fragment-id="correlation-id" />
+    <include-fragment fragment-id="rate-limit" />
+
+    <!--
+      Delegated user token validation (placeholder values only).
+      Replace audience/scope per API:
+        - BFF: aud=api://00000000-0000-0000-0000-000000000101, scp=mcp.access
+        - Agent gateway: aud=api://00000000-0000-0000-0000-000000000102, scp=mcp.access|mcp.write
+      Keep single-audience validation (avoid multi-audience tokens).
+    -->
+    <validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" require-scheme="Bearer">
+      <openid-config url="https://login.microsoftonline.com/{tenant-id-placeholder}/v2.0/.well-known/openid-configuration" />
+      <audiences>
+        <audience>api://00000000-0000-0000-0000-000000000101</audience>
+      </audiences>
+      <issuers>
+        <issuer>https://sts.windows.net/{tenant-id-placeholder}/</issuer>
+        <issuer>https://login.microsoftonline.com/{tenant-id-placeholder}/v2.0</issuer>
+      </issuers>
+      <required-claims>
+        <!-- Delegated-only: require scp to reject app-only tokens. -->
+        <claim name="scp" match="any">
+          <value>mcp.access</value>
+          <value>mcp.write</value>
+        </claim>
+        <!-- Trusted tenant allowlist (placeholder GUIDs). -->
+        <claim name="tid" match="any">
+          <value>00000000-0000-0000-0000-000000000001</value>
+          <value>00000000-0000-0000-0000-000000000002</value>
+        </claim>
+      </required-claims>
+    </validate-jwt>
+
+    <!-- Preserve inbound Authorization for delegated flow; app performs OBO later. -->
+    <set-header name="Authorization" exists-action="override">
+      <value>@(context.Request.Headers.GetValueOrDefault("Authorization", ""))</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <include-fragment fragment-id="safe-logging" />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

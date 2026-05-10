@@ -1,0 +1,27 @@
+{
+  "id": "003-local-delegated-flow-integration",
+  "name": "Local delegated flow integration",
+  "status": "complete",
+  "phase": "close",
+  "impact": "high",
+  "owner": "Neo",
+  "requested_by": "Ashley Hollis",
+  "priority": 2,
+  "last_updated": "2026-05-10",
+  "artifacts": {
+    "roadmap": ".squad\\project\\roadmap.md",
+    "readme": ".squad\\specs\\003-local-delegated-flow-integration\\README.md",
+    "goals": ".squad\\specs\\003-local-delegated-flow-integration\\goals.md",
+    "research": ".squad\\specs\\003-local-delegated-flow-integration\\research.md",
+    "requirements": ".squad\\specs\\003-local-delegated-flow-integration\\requirements.md",
+    "design": ".squad\\specs\\003-local-delegated-flow-integration\\design.md",
+    "tasks": ".squad\\specs\\003-local-delegated-flow-integration\\tasks.md",
+    "progress": ".squad\\specs\\003-local-delegated-flow-integration\\.progress.md"
+  },
+  "dependencies": ["001-token-validation-and-obo"],
+  "reviewers": ["Trinity", "Morpheus"],
+  "totalTasks": 5,
+  "completedTasks": 5,
+  "notes": "Tracking artifacts were added immediately after implementation to repair missing spec-first workflow. Future milestones must create or update the spec before code changes."
+}
+

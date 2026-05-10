@@ -1,0 +1,7 @@
+flowchart LR
+  User((User)) --> Web[Web App]
+  User --> Entra[Entra ID]
+  Entra -->|Auth code| Web
+  Web -->|Session| BFF[BFF]
+  BFF -->|Delegated token (aud: API A)| APIA[API A]
+  APIA -->|OBO token (aud: API B)| APIB[API B]

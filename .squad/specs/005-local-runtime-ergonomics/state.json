@@ -1,0 +1,39 @@
+{
+  "spec_id": "005",
+  "slug": "local-runtime-ergonomics",
+  "milestone": "M4",
+  "phase": "complete",
+  "status": "complete",
+  "created": "2026-05-14",
+  "updated": "2026-05-14",
+  "requested_by": "Ashley Hollis",
+  "owners": {
+    "primary": ["Tank", "Neo"],
+    "reviewers": ["Morpheus", "Trinity"]
+  },
+  "impact": "Medium",
+  "spec_gate_satisfied": true,
+  "artifacts": {
+    "README.md": "complete",
+    "goals.md": "complete",
+    "research.md": "complete",
+    "requirements.md": "complete",
+    "design.md": "complete",
+    "tasks.md": "complete",
+    "state.json": "complete",
+    ".progress.md": "complete"
+  },
+  "validation_commands": [
+    "docker compose -f docker\\docker-compose.yml config --quiet",
+    "docker compose -f docker\\docker-compose.yml -f docker\\docker-compose.single-tenant.yml config --quiet",
+    "docker compose -f docker\\docker-compose.yml -f docker\\docker-compose.vendor-shaped.yml config --quiet",
+    "docker compose -f docker\\docker-compose.yml -f docker\\docker-compose.cross-tenant.local.yml config --quiet",
+    "python -m pytest"
+  ],
+  "notes": [
+    "Spec artifacts are complete and reviewed; implementation is unblocked.",
+    "Spec-first gate satisfied after Morpheus architecture approval and Trinity security amendments.",
+    "BFF /chat/session endpoint and CORS prerequisites are M4 deliverables required by M7.",
+    "M4 final validation passed: all Compose config checks and python -m pytest (65 passed)."
+  ]
+}

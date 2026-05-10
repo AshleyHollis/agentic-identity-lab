@@ -1,0 +1,5 @@
+<fragment>
+  <!-- Safe logging: avoid tokens, PII, and payloads. -->
+  <set-variable name="safe-log" value='@(string.Format("corr={0} method={1} path={2} status={3}", context.Request.Headers.GetValueOrDefault("x-correlation-id", ""), context.Request.Method, context.Request.OriginalUrl.Path, context.Response.StatusCode))' />
+  <trace source="safe-logging" severity="information">@((string)context.Variables["safe-log"])</trace>
+</fragment>

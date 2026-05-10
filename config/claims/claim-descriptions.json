@@ -1,0 +1,13 @@
+{
+  "aud": "Audience - the intended recipient of the token.",
+  "iss": "Issuer - the authority that issued the token.",
+  "tid": "Tenant ID for the issuing Entra ID tenant.",
+  "azp": "Authorized party - the client app acting on the user's behalf.",
+  "appid": "Application (client) ID for app-only tokens.",
+  "scp": "Delegated scopes granted to the user.",
+  "roles": "App roles granted to the client (app-only).",
+  "exp": "Expiration time (epoch).",
+  "nbf": "Not-before time (epoch).",
+  "iat": "Issued-at time (epoch).",
+  "ver": "Token version."
+}

@@ -5,23 +5,26 @@ Principles
 - Stay public-safe: no secrets, tenant IDs, or live tokens.
 - Keep implementations minimal and extendable.
 
-## Terminology (canonical — see ADR 0006)
+## Terminology (canonical — see ADR 0008)
 
 | Term | Meaning | Filesystem path |
 |------|---------|-----------------|
-| **Agentic Layer** | Lab's application-level agent orchestration service | `apps/agent-gateway/` *(legacy path; not renamed)* |
+| **Agent Execution Service** | Lab's application-level agent execution service — hosts AI agents, enforces Entra Agent ID / OBO boundaries, code-first successor to PromptFlow | `apps/agent-gateway/` *(legacy path; not renamed until Neo completes runtime rename)* |
+| **Identity Lab Agent Execution Service** | Qualified display name used when org/lab context is useful | Same service as above |
 | **AKS Agent Gateway** | Standalone agentgateway.dev infrastructure proxy running as an AKS pod sidecar | Deployed to AKS; not a local source directory |
 
-> "Agent gateway" (unqualified) is retired as a standalone term in new documentation.
-> The Docker Compose service name `agent-gateway` is unchanged.
+> **Slug:** `agent-execution` (used in new Terraform resource names, K8s labels, and Docker image tags after runtime rename).  
+> **Legacy alias:** Docker Compose service `agent-gateway` and directory `apps/agent-gateway/` are unchanged until Neo completes the runtime rename.  
+> **Prohibited terms in new prose:** "Agentic Layer" (superseded), unqualified "Agent Gateway" (collision with AKS Agent Gateway), unqualified "Agent Service" (collision with Azure AI Agent Service / Foundry).  
+> **Historical note:** "Agentic Layer" was the canonical term from ADR 0006 (M5). ADR 0008 supersedes ADR 0006.
 
 ---
 
 ## Status Dashboard
 
-> Last updated: 2026-05-14 · Maintained by Morpheus
+> Last updated: 2026-06-01 · Maintained by Tank
 
-**▶ Current position: Milestone 5 — AKS + Entra Agent ID auth exploration (spec promotion + terminology/tracing amendment)**
+**▶ Current position: M6 Task 0 — naming adopted (Agent Execution Service). M5 complete. Next: Milestone 6 — Azure deployment baseline.**
 
 | # | Milestone | Spec | Status | Validation |
 |---|-----------|------|--------|------------|
@@ -29,7 +32,7 @@ Principles
 | M2 | Local delegated flow integration | [Spec 003](.squad\specs\003-local-delegated-flow-integration\README.md) | ✅ Complete | `python -m pytest` passed |
 | M3 | APIM policy alignment | [Spec 004](.squad\specs\004-apim-policy-alignment\README.md) | ✅ Complete | pytest 56 passed; `terraform fmt` + `validate` passed |
 | M4 | Local runtime ergonomics | [Spec 005](.squad\specs\005-local-runtime-ergonomics\README.md) | ✅ Complete | Compose configs passed; `python -m pytest` 65 passed |
-| M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | 🔄 In Progress | Spec promoted; pending T01–T03 review gates |
+| M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | ✅ Complete | `python -m pytest` 229 passed; Terraform fmt/init/validate passed; Compose tracing config passed |
 | M6 | Azure deployment baseline | *(spec not yet created)* | 📋 Roadmap | `terraform fmt` + `validate` |
 | M7 | Variant client implementations | *(spec not yet created)* | 📋 Roadmap | variant tests + `python -m pytest` |
 
@@ -39,7 +42,7 @@ Principles
 
 ## Milestone 1 — Local token validation + OBO boundaries (Spec 001)
 
-**Goal:** Establish offline-safe JWT validation scaffolding and explicit OBO boundaries across BFF / Agentic Layer → MCP protected API.  
+**Goal:** Establish offline-safe JWT validation scaffolding and explicit OBO boundaries across BFF / Agent Execution Service → MCP protected API.  
 **Owner agents:** Morpheus (architecture), Trinity (security), Neo (backend)  
 **Impact:** High  
 **Status:** ✅ Complete
@@ -50,7 +53,7 @@ Principles
 |-----------|---------|
 | Offline JWT validation | `identity_lab_auth` validates JWTs from fixture files without any network call to Entra ID. |
 | PII suppression | `sanitize_claims()` strips `oid`, `sub`, `email`, `upn`, `name`, `preferred_username` on every path. |
-| OBO boundary defined | The Agentic Layer must exchange the inbound token for an MCP-audience token before calling the MCP protected API. Forwarding the original token is blocked. |
+| OBO boundary defined | The Agent Execution Service must exchange the inbound token for an MCP-audience token before calling the MCP protected API. Forwarding the original token is blocked. |
 | `/whoami` endpoints | All services return only safe, sanitized claim metadata. Raw tokens are never returned. |
 | Negative cases pass | Wrong audience, missing scope, and expired token all result in 401 rejections with no token leakage. |
 | `python -m pytest` | Initial auth unit test suite passes. |
@@ -58,7 +61,7 @@ Principles
 **Key files:**
 - `apps/shared/python/identity_lab_auth/*`
 - `apps/bff/python-fastapi/app/auth.py`
-- `apps/agent-gateway/python-fastapi-agent-framework/app/auth.py` *(Agentic Layer)*
+- `apps/agent-gateway/python-fastapi-agent-framework/app/auth.py` *(Agent Execution Service — legacy path)*
 - `apps/mcp-protected-api/python-fastapi/app/auth.py`
 - `tests/fixtures/sample-claims/*`
 - `config/env/*.env.example`
@@ -67,7 +70,7 @@ Principles
 
 ## Milestone 2 — Local delegated flow integration (Spec 003)
 
-**Goal:** Prove request flow from BFF / Agentic Layer into MCP protected API using mock OBO exchange and integration tests.  
+**Goal:** Prove request flow from BFF / Agent Execution Service into MCP protected API using mock OBO exchange and integration tests.  
 **Owner agents:** Neo, Trinity  
 **Impact:** High  
 **Status:** ✅ Complete
@@ -76,14 +79,14 @@ Principles
 
 | Capability | Details |
 |-----------|---------|
-| End-to-end local flow | A test client can drive a request through BFF → Agentic Layer → MCP protected API entirely offline. |
-| Mock OBO exchange | The OBO exchange resolves from fixture claims with zero network calls. The Agentic Layer does not invent or bypass tokens. |
+| End-to-end local flow | A test client can drive a request through BFF → Agent Execution Service → MCP protected API entirely offline. |
+| Mock OBO exchange | The OBO exchange resolves from fixture claims with zero network calls. The Agent Execution Service does not invent or bypass tokens. |
 | Delegated token integrity | The original inbound token is never forwarded to the MCP API; only the OBO-exchanged token (MCP-audience) is used. |
 | Integration tests | `tests/integration/` tests verify the full delegated chain from end to end with mock tokens. |
 | `python -m pytest` | All tests pass including integration tests. |
 
 **Key files:**
-- `apps/agent-gateway/python-fastapi-agent-framework/app/*` *(Agentic Layer)*
+- `apps/agent-gateway/python-fastapi-agent-framework/app/*` *(Agent Execution Service — legacy path)*
 - `apps/mcp-protected-api/python-fastapi/app/*`
 - `tests/integration/*`
 - `.squad/specs/003-local-delegated-flow-integration/*`
@@ -101,8 +104,8 @@ Principles
 
 | Capability | Details |
 |-----------|---------|
-| APIM policy documentation | `docs/apim/` shows correct audience enforcement for inbound user tokens for BFF and Agentic Layer boundaries. |
-| OBO boundary in policies | Policy examples make explicit that APIM must not replace delegated tokens with managed identity; OBO happens in the Agentic Layer, not at APIM. |
+| APIM policy documentation | `docs/apim/` shows correct audience enforcement for inbound user tokens for BFF and Agent Execution Service boundaries. |
+| OBO boundary in policies | Policy examples make explicit that APIM must not replace delegated tokens with managed identity; OBO happens in the Agent Execution Service, not at APIM. |
 | Terraform policy validation | `infra/terraform/policies/` is format-checked and validates without live Azure credentials. |
 | Policy integration tests | Tests assert audience rules, OBO boundary rules, and that policies reject wrong-audience tokens. |
 | `terraform fmt` + `validate` | Pass for APIM modules. |
@@ -113,7 +116,7 @@ Principles
 
 ## Milestone 4 — Local runtime ergonomics (Spec 005)
 
-**Goal:** Ensure Docker Compose and env examples support the offline token flow for BFF / Agentic Layer / MCP.  
+**Goal:** Ensure Docker Compose and env examples support the offline token flow for BFF / Agent Execution Service / MCP.  
 **Owner agents:** Tank, Neo  
 **Impact:** Medium  
 **Status:** ✅ Complete
@@ -122,7 +125,7 @@ Principles
 
 | Capability | Details |
 |-----------|---------|
-| `docker compose up` | All services start: BFF, Agentic Layer, MCP Protected API. |
+| `docker compose up` | All services start: BFF, Agent Execution Service, MCP Protected API. |
 | Offline token flow | `.env.example` files guide developers through offline token flow configuration with no Azure credentials. |
 | New-developer experience | A new contributor can `docker compose up` and run `python -m pytest` with no live Azure credentials and no manual setup beyond `.env` copy. |
 | Compose validation | Base and overlay Compose config checks pass; no missing service definitions. |
@@ -134,10 +137,10 @@ Principles
 
 ## Milestone 5 — AKS + Entra Agent ID + Observability
 
-**Goal:** Validate an optional AKS path for Microsoft Entra Agent ID auth in agent/MCP workloads, building on the local mock/OBO foundation. Establish end-to-end tracing (OpenTelemetry + Jaeger) across all mock and AKS flows. Resolve terminology ambiguity between the Agentic Layer and the AKS Agent Gateway.  
+**Goal:** Validate an optional AKS path for Microsoft Entra Agent ID auth in agent/MCP workloads, building on the local mock/OBO foundation. Establish end-to-end tracing (OpenTelemetry + Jaeger) across all mock and AKS flows. Adopt "Agent Execution Service" as the canonical successor term to "Agentic Layer" (naming amendment — pre-M6 approved).  
 **Owner agents:** Morpheus (Lead/Architect), Tank (Infra), Trinity (Security), Neo (Backend)  
 **Impact:** High  
-**Status:** 🔄 In Progress — Spec 002 promoted to tasks-ready; terminology + tracing amendment applied; implementation blocked pending T01–T03 review gates.
+**Status:** ✅ Complete — all Spec 002 tasks T01–T20 complete; architecture/security sign-offs accepted; final validation passed.
 
 ### ✅ Done by end of M5 — what works
 
@@ -157,7 +160,7 @@ Principles
 | **AKS Agent Gateway tracing design** | agentgateway.dev's native OTLP → Jaeger pipeline documented; Jaeger UI shows `list_tools`/`call_tool` spans when AKS flows are exercised. |
 | **W3C TraceContext propagation** | `traceparent`/`tracestate` forwarded on all inter-service HTTP calls. |
 | **No PII in traces** | Span attribute allowlist enforced; `oid`, `sub`, raw tokens never in spans. |
-| **65+ tests pass** | `python -m pytest` passes from M4 baseline plus new M5 tests. |
+| **Full Python suite passes** | `python -m pytest` passes: 229 tests. |
 | **No secrets committed** | No real GUIDs, tenant IDs, kubeconfigs, or tokens anywhere in committed files. |
 
 **Key files:**
@@ -166,19 +169,21 @@ Principles
 - `.squad\architecture\decisions\002-end-to-end-tracing-strategy.md`
 - `docs\adr\0006-agentic-layer-vs-agent-gateway-terminology.md`
 - `docs\adr\0007-end-to-end-tracing-strategy.md`
-- `apps\shared\python\identity_lab_auth\agent_obo.py` (T10 — not yet created)
-- `apps\shared\python\identity_lab_auth\telemetry.py` (T18 — not yet created)
-- `tests\fixtures\sample-claims\agent-*.json` (T07 — not yet created)
-- `infra\terraform\modules\aks\`, `workload-identity\`, `k8s-bootstrap\` (T04 — not yet created)
-- `infra\terraform\environments\aks\` (T04 — not yet created)
-- `docs\deployment\k8s\*` (T05 — not yet created)
-- `docker\docker-compose.yml` or overlay — Jaeger service (tracing — not yet created)
+- `apps\shared\python\identity_lab_auth\agent_obo.py`
+- `apps\shared\python\identity_lab_auth\telemetry.py`
+- `tests\fixtures\sample-claims\agent-*.json`
+- `infra\terraform\modules\aks\`, `workload-identity\`, `k8s-bootstrap\`
+- `infra\terraform\environments\aks\`
+- `docs\deployment\k8s\*`
+- `docker\docker-compose.tracing.yml`, `docker\otel-collector-config.yaml`
 
 **Validation targets:**
 ```
 python -m pytest
 terraform -chdir=infra\terraform fmt -check -recursive
+terraform -chdir=infra\terraform\environments\aks init -backend=false
 terraform -chdir=infra\terraform\environments\aks validate
+docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml config --quiet
 ```
 
 ---

@@ -1,0 +1,146 @@
+openapi: 3.0.3
+info:
+  title: Identity Lab Agent Gateway
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /readyz:
+    get:
+      summary: Readiness check
+      responses:
+        "200":
+          description: Ready
+  /whoami:
+    get:
+      summary: Safe claim metadata
+      responses:
+        "200":
+          description: WhoAmI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmI"
+  /debug/claims:
+    get:
+      summary: Debug claim metadata
+      responses:
+        "200":
+          description: Debug claims response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugClaims"
+  /agent/invoke:
+    post:
+      summary: Invoke agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentInvokeRequest"
+      responses:
+        "200":
+          description: Invocation response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentInvokeResponse"
+  /agent/invoke-modern:
+    post:
+      summary: Invoke modern agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentInvokeRequest"
+      responses:
+        "200":
+          description: Invocation response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentInvokeResponse"
+  /agent/invoke-low-change:
+    post:
+      summary: Invoke low-change agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentInvokeRequest"
+      responses:
+        "200":
+          description: Invocation response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentInvokeResponse"
+components:
+  schemas:
+    AgentInvokeRequest:
+      type: object
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+    AgentInvokeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        correlation_id:
+          type: string
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        payload_keys:
+          type: array
+          items:
+            type: string
+    WhoAmI:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        scopes:
+          type: array
+          items:
+            type: string
+        audiences:
+          type: array
+          items:
+            type: string
+        correlation_id:
+          type: string
+    DebugClaims:
+      type: object
+      properties:
+        debug_enabled:
+          type: boolean
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        correlation_id:
+          type: string

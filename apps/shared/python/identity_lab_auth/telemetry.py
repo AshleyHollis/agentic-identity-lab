@@ -8,7 +8,7 @@ tests and offline runs are never blocked by a missing Jaeger/collector endpoint.
 Usage in each FastAPI service's ``main.py``::
 
     from identity_lab_auth.telemetry import setup_telemetry, instrument_fastapi
-    setup_telemetry(service_name="agent-gateway")
+    setup_telemetry(service_name="agent-execution")
     instrument_fastapi(app)
 
 Span attribute helpers::
@@ -78,7 +78,7 @@ def setup_telemetry(service_name: str) -> None:
 
     Args:
         service_name: Value for the ``service.name`` resource attribute
-            (e.g. ``"agent-gateway"``, ``"bff"``, ``"mcp-protected-api"``).
+            (e.g. ``"agent-execution"``, ``"bff"``, ``"mcp-protected-api"``).
     """
     if _is_disabled():
         try:

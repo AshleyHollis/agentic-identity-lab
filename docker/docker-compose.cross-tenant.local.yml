@@ -1,0 +1,16 @@
+services:
+  bff:
+    environment:
+      - TENANT_MODE=cross-tenant
+      - TENANT_A_ISSUER=https://login.microsoftonline.com/{tenant-a-id}/v2.0
+      - TENANT_B_ISSUER=https://login.microsoftonline.com/{tenant-b-id}/v2.0
+  agent-execution:
+    environment:
+      - TENANT_MODE=cross-tenant
+      - TENANT_A_ISSUER=https://login.microsoftonline.com/{tenant-a-id}/v2.0
+      - TENANT_B_ISSUER=https://login.microsoftonline.com/{tenant-b-id}/v2.0
+  mcp-protected-api:
+    environment:
+      - TENANT_MODE=cross-tenant
+      - TENANT_A_ISSUER=https://login.microsoftonline.com/{tenant-a-id}/v2.0
+      - TENANT_B_ISSUER=https://login.microsoftonline.com/{tenant-b-id}/v2.0

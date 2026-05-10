@@ -1,0 +1,9 @@
+{
+  "name": "@identity-lab/identity-chat-webpart",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder SPFx webpart package for Identity Lab.",
+  "scripts": {
+    "info": "echo \"Placeholder only. Scaffold with @microsoft/generator-sharepoint.\""
+  }
+}

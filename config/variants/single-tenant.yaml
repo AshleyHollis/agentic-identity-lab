@@ -1,0 +1,8 @@
+variant: single-tenant
+name: Single Tenant
+description: Default single-tenant deployment using Azure Container Apps.
+deployment_target: azure-container-apps
+terraform_environment: infra/terraform/environments/single-tenant
+compose_files:
+  - docker/docker-compose.yml
+  - docker/docker-compose.single-tenant.yml

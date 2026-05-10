@@ -1,0 +1,19 @@
+<policies>
+  <inbound>
+    <base />
+    <!-- ANTI-PATTERN: This policy is intentionally broken. Do NOT copy into production. -->
+    <!-- It replaces the Authorization header with a fake managed identity token. -->
+    <set-header name="Authorization" exists-action="override">
+      <value>ManagedIdentity {replace-with-real-obo-token}</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

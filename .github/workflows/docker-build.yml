@@ -1,0 +1,26 @@
+name: Docker Compose Validate
+
+on:
+  pull_request:
+    paths:
+      - docker/**
+  push:
+    branches: [ main ]
+    paths:
+      - docker/**
+  workflow_dispatch:
+
+jobs:
+  compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compose config validation
+        run: |
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.single-tenant.yml config
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.vendor-shaped.yml config
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.cross-tenant.local.yml config
+
+      # Validation only; no image push.

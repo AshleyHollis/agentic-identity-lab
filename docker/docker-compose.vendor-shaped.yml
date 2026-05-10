@@ -1,0 +1,13 @@
+services:
+  bff:
+    environment:
+      - TENANT_MODE=vendor-shaped
+      - VENDOR_ID=vendor-placeholder
+  agent-execution:
+    environment:
+      - TENANT_MODE=vendor-shaped
+      - VENDOR_ID=vendor-placeholder
+  mcp-protected-api:
+    environment:
+      - TENANT_MODE=vendor-shaped
+      - VENDOR_ID=vendor-placeholder

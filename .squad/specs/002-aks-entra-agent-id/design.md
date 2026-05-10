@@ -10,16 +10,15 @@
 
 *(Added: Amendment 001, 2026-05-15 — see also `README.md §Terminology`)*
 
-To prevent confusion between the lab's own services and the standalone Agent Gateway project, this document uses the following terms consistently:
+To prevent confusion between the lab's own services and the AKS Agent Gateway, this document uses the following terms consistently (per ADR 0006):
 
 | Term | Meaning in this document |
 |------|--------------------------|
-| **Agentic layer** | The lab's application stack: BFF → local app gateway → MCP protected API |
-| **Local app gateway** | `apps/agent-gateway/python-fastapi-agent-framework` (the lab's FastAPI service) |
-| **Standalone Agent Gateway** | The agentgateway.dev open-source proxy; sits in front of the local app gateway in AKS |
-| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the local app gateway in AKS |
+| **Agentic Layer** | The lab's app-level orchestration service at `apps/agent-gateway/` (legacy filesystem path; not renamed). The application identity and OBO boundary. |
+| **AKS Agent Gateway** | The agentgateway.dev open-source proxy deployed in AKS as infrastructure; NOT the Agentic Layer |
+| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the Agentic Layer in AKS |
 
-Wherever a previous version of this document said "agent-gateway deployment" in the context of Kubernetes, the correct term is **"local app gateway deployment"**.
+The `apps/agent-gateway/` directory and Docker Compose service name `agent-gateway` are legacy paths preserved for backward compatibility. All prose references use **Agentic Layer**.
 
 ---
 
@@ -73,21 +72,36 @@ Wherever a previous version of this document said "agent-gateway deployment" in 
 
 ## ADR-M5-03 — JWKS Client Library and Key-Rotation / Caching Strategy
 
-**Status:** Pending — Trinity decision required before T12 (strict JWKS tests)
+**Status:** ✅ Accepted (Trinity — 2026-05-15)
+
+**Decision:** Option A — `PyJWT` + manual `httpx` JWKS fetch, in-process TTL dict keyed by `kid`, 300-second default TTL (configurable via `AUTH_JWKS_CACHE_TTL_SECONDS`), one `kid`-miss retry with full cache invalidation, then hard fail.
+
+**Rationale:**
+- `PyJWT` is actively maintained and widely adopted in the FastAPI/Python ecosystem.
+- Manual JWKS fetch via `httpx` gives explicit control over algorithm enforcement and timeout (no SSRF risk when URL is sourced strictly from config).
+- The TTL + `kid`-miss-retry pattern is transparent and testable without additional mocking layers.
+- `python-jose` carries CVE-2022-29217 (algorithm confusion) — eliminated.
+- `joserfc` lacks the community adoption and ecosystem precedent to prefer over PyJWT for this use case.
+
+**Full cross-cutting decision:** See `.squad/architecture/decisions/003-jwks-client-caching-strategy.md`.
 
 **Question:** Which Python JWKS client library should be used, and what caching / key-rotation strategy should be enforced?
 
 **Options evaluated:**
 
-| Option | Library | Cache approach | Key rotation |
-|---|---|---|---|
-| A | `PyJWT` + manual `httpx`/`urllib` JWKS fetch | In-process TTL dict (e.g., 5 min) | On `kid` miss: clear cache, re-fetch once, then fail |
-| B | `joserfc` | Custom LRU | Same as A |
-| C | `python-jose` | In-process | No explicit `kid`-miss rotation hook |
+| Option | Library | Cache approach | Key rotation | Security notes |
+|---|---|---|---|---|
+| A ✅ | `PyJWT` + manual `httpx` JWKS fetch | In-process TTL dict (default 300 s, configurable) | On `kid` miss: invalidate cache, re-fetch once, then hard fail | Actively maintained; no known algorithm confusion CVEs; full control over `jku`/`x5u` suppression |
+| B | `joserfc` | Custom LRU | Same as A | Viable but smaller community; no clear security advantage over PyJWT |
+| C ❌ | `python-jose` | In-process | No explicit `kid`-miss rotation hook | CVE-2022-29217 (algorithm confusion); eliminated |
 
-**Preferred (pending confirmation):** Option A — `PyJWT` is already a common transitive dependency in the FastAPI ecosystem; the TTL + `kid`-miss-retry pattern is transparent and testable without additional mocking layers. Cache entries keyed by `kid`; TTL of 300 seconds by default (configurable). `joserfc` is a viable alternative if Trinity identifies a security advantage.
+**Security constraints (Trinity — mandatory for T09/T12 implementation):**
 
-**Decision:** _To be recorded by Trinity in `.progress.md`._
+1. **JWKS URL source:** The JWKS URL MUST be sourced exclusively from `AUTH_JWKS_URL` config. Token header claims `jku` and `x5u` MUST be ignored; any library mode that reads them MUST be disabled.
+2. **Algorithm case normalization:** The `alg` header value MUST be normalized to lowercase before comparison against `REJECTED_ALGORITHMS` and `ALLOWED_ALGORITHMS`. A token with `alg: None` or `alg: NONE` MUST be rejected identically to `alg: none`.
+3. **JWKS fetch timeout:** `httpx` JWKS fetch MUST set a connect + read timeout no greater than 5 seconds to prevent slow-server DoS.
+4. **Cache isolation:** The in-process JWKS cache MUST be per-service-instance (no shared mutable global accessible across test cases). Tests that exercise cache behavior MUST inject a fresh `JwksCache` instance.
+5. **No blocking on cache population:** Cache is populated lazily on first validation; startup MUST NOT fail if the JWKS endpoint is unreachable.
 
 ---
 
@@ -370,7 +384,7 @@ docs/deployment/k8s/
 ├── README.md                      # Context: illustrative only; not applied by CI
 ├── namespace.yaml
 ├── service-account.yaml
-├── agent-gateway-deployment.yaml  # Local app gateway + Entra Agent ID sidecar container (illustrative)
+├── agent-gateway-deployment.yaml  # Agentic Layer (`apps/agent-gateway/`) + Entra Agent ID sidecar container (illustrative)
 └── network-policy.yaml
 ```
 
@@ -380,11 +394,18 @@ All files marked at top: `# ILLUSTRATIVE REFERENCE ONLY — not applied by CI or
 
 ## Security Design Notes (Trinity)
 
-1. **No token logging.** Raw bearer strings must never appear in logs, structured output, or HTTP response bodies — only sanitized claim dicts.
-2. **PII suppression.** `oid`, `sub`, `email`, `upn`, `name`, `preferred_username` are suppressed at the `sanitize_claims()` boundary in all paths.
-3. **`xms_act_fct` shape.** This claim is a JSON object in Entra OBO tokens. `sanitize_claims()` must handle nested objects safely — the existing `_sanitize_value` function returns `None` for unknown types, which would drop the claim. Implementation must handle `dict` type explicitly or flatten to a safe representation.
-4. **No cross-tenant tokens.** `/common/` or `/organizations/` issuers are rejected at the `iss` validation stage (pre-existing rule from Spec 001; must be preserved in the Agent OBO path).
-5. **Sidecar network policy.** Kubernetes network policy must deny all ingress to the sidecar port except from the co-located agent container (same pod, `localhost`).
+*(Notes 1–5 confirmed at T03 review — 2026-05-15. Notes 6–10 added at T03 review.)*
+
+1. **No token logging.** Raw bearer strings must never appear in logs, structured output, or HTTP response bodies — only sanitized claim dicts. This applies equally to span attributes in the OTEL tracing path.
+2. **PII suppression.** `oid`, `sub`, `email`, `upn`, `name`, `preferred_username`, `given_name`, `family_name` are suppressed at the `sanitize_claims()` boundary in all paths. The safe-claims allowlist is the authoritative source; no claim key outside the allowlist may be forwarded to any external system.
+3. **`xms_act_fct` dict handling — CONFIRMED REQUIRED (T06 implementation gate).** `xms_act_fct` is a JSON object (`{"appid": "<uuid>"}`) in Entra OBO tokens. The existing `_sanitize_value()` function returns `None` for `dict` inputs (falls through to the final `return None`), which would silently drop the claim even after it is added to the allowlist. T06 MUST extend `_sanitize_value()` to handle `dict` type by either (a) recursively sanitizing only string-valued scalar keys, or (b) serialising to a bounded JSON string (≤ 512 chars). A test MUST assert that `sanitize_claims({"xms_act_fct": {"appid": "x"}, "oid": "y"})` returns `{"xms_act_fct": ...}` without `"oid"`.
+4. **No cross-tenant tokens.** `/common/` or `/organizations/` issuers are rejected at the `iss` validation stage (pre-existing rule from Spec 001; must be preserved in the Agent OBO path). The Agent OBO boundary MUST inherit this check; it MUST NOT bypass `tid` validation for sidecar-originated tokens.
+5. **Sidecar network policy.** Kubernetes network policy must deny all ingress to the sidecar port except from the co-located agent container (same pod, `localhost`). This is the only layer preventing cross-pod exfiltration of Agent ID tokens in the AKS environment.
+6. **Algorithm normalization (T09 implementation gate).** The JWT `alg` header MUST be lowercased before comparison with `REJECTED_ALGORITHMS` / `ALLOWED_ALGORITHMS`. A header of `alg: None`, `alg: NONE`, or `alg: nOnE` MUST all be rejected identically to `alg: none`. Tests for `alg:none` rejection MUST include mixed-case variants.
+7. **JWKS URL source integrity (T09/T12 implementation gate).** The JWKS URL MUST be sourced exclusively from the `AUTH_JWKS_URL` environment variable / config. The JWT header claims `jku` (JWK Set URL) and `x5u` (X.509 URL) MUST be explicitly ignored — any `PyJWT` decode mode that follows these claims MUST be disabled. Failure to suppress `jku`/`x5u` creates a server-side request forgery (SSRF) and algorithm-swap attack vector.
+8. **JWKS fetch timeout.** The `httpx` client used for JWKS fetches MUST configure a combined connect + read timeout ≤ 5 seconds. An unreachable JWKS endpoint must produce a `ValueError` (not an indefinite hang) so that upstream HTTP 401 is returned promptly.
+9. **Fixture name suppression in strict-mode spans (T20 tracing security gate).** Per TR-04.2 (trinity-tank-tracing-input), the `identity_lab.fixture_name` span attribute MUST be set to an empty string or omitted entirely when `AUTH_MODE=strict`. The fixture header value MUST NOT appear in any span, log, or structured output in strict mode. This mirrors the strict-mode fixture suppression already specified in `auth_settings.py` and this design doc.
+10. **AgentSidecarClient implementation contract.** All concrete implementations of `AgentSidecarClient` (including any future real HTTP adapter) MUST route all claim outputs through `sanitize_claims()` before returning. The ABC docstrings MUST document this as a contract obligation, not merely an implementation choice, so future implementers do not inadvertently expose raw Entra token claims.
 
 ---
 
@@ -394,7 +415,7 @@ All files marked at top: `# ILLUSTRATIVE REFERENCE ONLY — not applied by CI or
 
 ### Overview
 
-All Python services in the lab's agentic layer MUST be instrumented with the OpenTelemetry (OTEL) SDK. The standalone Agent Gateway (agentgateway.dev) emits OTEL spans natively. Both sets of spans are sent to the same OTEL collector and visualized in Jaeger.
+All Python services in the lab's application stack MUST be instrumented with the OpenTelemetry (OTEL) SDK. The AKS Agent Gateway (agentgateway.dev) emits OTEL spans natively. Both sets of spans are sent to the same OTEL collector and visualized in Jaeger.
 
 **Reference:** https://agentgateway.dev/docs/standalone/main/reference/observability/traces/
 
@@ -426,53 +447,78 @@ services:
 
 Usage: `docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up`
 
+> **T19 implementer note:** The base Compose stack uses the named network `agentic-identity-lab`
+> (see `docker-compose.yml` `networks.default.name`). The tracing overlay MUST join this network
+> so that `bff`, `agent-gateway`, and `mcp-protected-api` can resolve `otel-collector:4317` by
+> Docker DNS. Add `networks: default: external: true  name: agentic-identity-lab` to
+> `docker-compose.tracing.yml`, or let Docker Compose merge the network automatically when both
+> files are passed to `docker compose -f … -f … up`.
+
 ### Span Model
 
 ```
 trace_id: <uuid>
 │
 ├─ span: bff.request                [BFF FastAPI]
-│  ├─ auth.mode: mock
+│  ├─ identity_lab.auth_mode: mock
 │  ├─ http.route: /api/...
-│  └─ span: local-app-gateway.request   [Local App Gateway]
-│     ├─ auth.audience: api://...-0201/access_as_user
-│     ├─ auth.outcome: accepted
-│     └─ span: agent_obo.exchange       [OBO boundary]
-│        ├─ obo.hop: agent_obo
+│  └─ span: agentic-layer.request       [Agentic Layer]
+│     ├─ identity_lab.aud: api://...-0201/access_as_user
+│     ├─ identity_lab.authorized: true
+│     └─ span: agentic-layer.obo.exchange  [OBO boundary]
+│        ├─ identity_lab.obo_hop: agent_obo
 │        └─ span: mcp-api.request       [MCP Protected API]
-│           └─ auth.outcome: accepted
+│           └─ identity_lab.authorized: true
 ```
 
-AKS flow adds an outer span from the standalone Agent Gateway:
+AKS flow: the BFF originates the trace root and injects `traceparent` into requests routed through
+the AKS Agent Gateway. The AKS Agent Gateway creates its own child span before forwarding to the
+Agentic Layer (in AKS the BFF span is visible as the remote parent in the gateway's span).
 
 ```
 trace_id: <uuid>
 │
-└─ span: standalone-agent-gateway.request  [agentgateway.dev — dynamic tracing]
-   └─ span: local-app-gateway.request      [Local App Gateway in AKS pod]
-      └─ span: entra-agent-id-sidecar.obo  [Sidecar OBO — localhost]
-         └─ span: mcp-api.request
+└─ span: aks-agent-gateway.request         [AKS Agent Gateway — agentgateway.dev, dynamic tracing]
+   └─ span: agentic-layer.request          [Agentic Layer in AKS pod]
+      ├─ span: sidecar.validate            [Entra Agent ID sidecar — GET /Validate]
+      ├─ span: sidecar.downstream-api      [Entra Agent ID sidecar — POST /DownstreamApi/{apiName}]
+      │    └─ identity_lab.obo_hop: agent_obo
+      └─ span: mcp-api.request
 ```
 
 ### Required Span Attributes
 
+All lab-specific span attributes MUST use the `identity_lab.*` namespace to avoid collision with
+OpenTelemetry semantic conventions. The `identity_lab.fixture_name` attribute is the authoritative
+precedent set by T03 security review §9; all lab attributes follow the same prefix.
+
 | Attribute key | Service | Value / notes |
 |---|---|---|
-| `service.name` | All | `bff`, `local-app-gateway`, `mcp-protected-api`, `standalone-agent-gateway` |
-| `auth.mode` | Local app gateway, BFF | Value of `AUTH_MODE` env var |
-| `auth.audience` | Local app gateway | `aud` claim from validated token |
-| `auth.outcome` | Local app gateway, MCP API | `accepted` or `rejected` |
-| `obo.hop` | OBO exchange span | `agent_obo` or `user_obo` |
-| `http.route` | All FastAPI services | Standard OTEL HTTP instrumentation |
-| `http.method` | All FastAPI services | Standard OTEL HTTP instrumentation |
-| `http.status_code` | All FastAPI services | Standard OTEL HTTP instrumentation |
+| `service.name` | All | `bff`, `agent-gateway`, `mcp-protected-api`, `aks-agent-gateway` |
+| `identity_lab.auth_mode` | Agentic Layer, BFF | Value of `AUTH_MODE` env var (`mock` / `strict`) |
+| `identity_lab.aud` | Agentic Layer | `aud` claim from validated token |
+| `identity_lab.authorized` | Agentic Layer, MCP API | Boolean — `true` or `false` |
+| `identity_lab.obo_hop` | OBO exchange span | `agent_obo` or `user_obo` |
+| `identity_lab.fixture_name` | All (mock only) | `X-Identity-Lab-Fixture` header value; MUST be blank/omitted in `AUTH_MODE=strict` (T03 §9) |
+| `http.route` | All FastAPI services | Standard OTEL HTTP semconv |
+| `http.method` | All FastAPI services | Standard OTEL HTTP semconv |
+| `http.status_code` | All FastAPI services | Standard OTEL HTTP semconv |
+
+> **service.name note:** The canonical lab service term is "Agentic Layer" (per ADR-001), but
+> `service.name` is set to `agent-gateway` to match the Docker Compose service name. This makes
+> Jaeger service dropdowns consistent with `docker compose ps` output. The AKS Agent Gateway
+> (agentgateway.dev) uses `aks-agent-gateway` to disambiguate from the lab service.
+
+> **FR-12 alignment:** FR-12 lists logical attribute names (`auth.mode`, `auth.audience`,
+> `auth.outcome`, `obo.hop`). This table supersedes those logical names with their implementation
+> identifiers under the `identity_lab.*` namespace.
 
 ### Propagation
 
 All services MUST propagate W3C `traceparent` and `tracestate` headers:
 - **Inbound:** Extract `traceparent` from every incoming HTTP request.
 - **Outbound:** Inject `traceparent` into every downstream HTTP call.
-- The standalone Agent Gateway propagates `traceparent` automatically per the agentgateway.dev tracing configuration.
+- The AKS Agent Gateway propagates `traceparent` automatically per the agentgateway.dev tracing configuration.
 
 ### Static vs Dynamic Tracing Configuration
 
@@ -480,7 +526,7 @@ All services MUST propagate W3C `traceparent` and `tracestate` headers:
 |---|---|---|
 | Mock flow (Docker Compose) | Static | All services share one OTEL collector endpoint (`localhost:4317`) |
 | AKS flow — lab services | Static | OTEL collector endpoint is a Kubernetes service (e.g., `otel-collector:4317`) |
-| AKS flow — standalone Agent Gateway | Dynamic | Per-listener `frontendPolicies.tracing`; CEL span attributes for `request.path`, `jwt.sub` etc.; `randomSampling` enabled |
+| AKS flow — AKS Agent Gateway | Dynamic | Per-listener `frontendPolicies.tracing`; CEL span attributes for `request.path`, `request.method` etc.; `randomSampling` enabled. **`jwt.sub` and `jwt.oid` MUST NOT be used as CEL expressions — PII prohibition (T03 §9, ADR-002).** |
 
 ### Visualization Goal
 
@@ -488,9 +534,9 @@ At the end of M5, a developer MUST be able to:
 
 1. Start the lab with `docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up`.
 2. Make a request through the BFF to the MCP protected API.
-3. Open `http://localhost:16686`, select service `local-app-gateway`, click **Find Traces**.
-4. See a complete trace with spans for: BFF → local app gateway (auth outcome + audience) → OBO boundary → MCP protected API.
-5. Expand any span to see `auth.mode`, `auth.outcome`, `obo.hop` attributes.
+3. Open `http://localhost:16686`, select service `agentic-layer`, click **Find Traces**.
+4. See a complete trace with spans for: BFF → Agentic Layer (auth outcome + audience) → OBO boundary → MCP protected API.
+5. Expand any span to see `identity_lab.auth_mode`, `identity_lab.authorized`, `identity_lab.obo_hop` attributes.
 
 ### Test Isolation
 
@@ -504,4 +550,6 @@ At the end of M5, a developer MUST be able to:
 
 | # | Date | Changed By | Summary | Status |
 |---|------|-----------|---------|--------|
-| 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Terminology Definitions section; updated AKS manifest layout to use "local app gateway" naming; added End-to-End Tracing Design (OTEL/Jaeger, span model, static/dynamic config, visualization goal). Implementation remains blocked. | Pending review |
+| 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Terminology Definitions section; updated AKS manifest layout to use Agentic Layer naming; added End-to-End Tracing Design (OTEL/Jaeger, span model, static/dynamic config, visualization goal). Implementation remains blocked pending T03. | Approved |
+| 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. Span `service.name` values updated to `agentic-layer` / `aks-agent-gateway`. | Applied |
+| T17-review | 2026-05-27 | Morpheus | T17 architecture review. Four amendments applied: (1) Docker network note for tracing overlay; (2) span names updated to dot-separated convention and `agentic-layer.obo.exchange` replacing `agent_obo.exchange`; (3) Required Span Attributes table converted to `identity_lab.*` namespace per T03 §9; (4) PII error removed — `jwt.sub` CEL example replaced with `request.path`/`request.method` and prohibition note added. `service.name` for lab service set to `agent-gateway` (Compose name) with architecture note. Verdict: AMENDED → ACCEPTED. T18 and T19 unblocked. | Applied |

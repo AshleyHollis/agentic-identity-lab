@@ -1,0 +1,24 @@
+<!-- Classic SharePoint page placeholder -->
+<div id="identity-chat-root"></div>
+
+<script>
+  // Optional: expose a token provider for the loader.
+  // Never embed secrets or tokens directly in the page.
+  window.IdentityChatLoader = {
+    getAccessToken: async function () {
+      // TODO: Acquire an access token from your approved flow.
+      return null;
+    },
+  };
+</script>
+
+<script
+  src="/SiteAssets/identity-chat/chat-loader.js"
+  data-bff-base-url="https://YOUR_BFF_DOMAIN"
+  data-chat-path="/chat/session"
+  data-user-id="USER_DISPLAY_HINT"
+  data-theme="light"
+  data-container-id="identity-chat-root"
+></script>
+
+<!-- Note: userId is a display hint only, never identity. -->

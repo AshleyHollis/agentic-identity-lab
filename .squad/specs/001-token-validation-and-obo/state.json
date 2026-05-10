@@ -1,0 +1,24 @@
+{
+  "id": "001-token-validation-and-obo",
+  "name": "Token validation and OBO boundaries",
+  "status": "complete",
+  "phase": "close",
+  "impact": "low",
+  "owner": "Morpheus",
+  "requested_by": "Ashley Hollis",
+  "priority": 1,
+  "last_updated": "2026-05-10",
+  "artifacts": {
+    "roadmap": ".squad\\project\\roadmap.md",
+    "readme": ".squad\\specs\\001-token-validation-and-obo\\README.md",
+    "goals": ".squad\\specs\\001-token-validation-and-obo\\goals.md",
+    "research": ".squad\\specs\\001-token-validation-and-obo\\research.md",
+    "requirements": ".squad\\specs\\001-token-validation-and-obo\\requirements.md",
+    "design": ".squad\\specs\\001-token-validation-and-obo\\design.md",
+    "progress": ".squad\\specs\\001-token-validation-and-obo\\.progress.md",
+    "tasks": ".squad\\specs\\001-token-validation-and-obo\\tasks.md"
+  },
+  "dependencies": [],
+  "reviewers": ["Trinity", "Morpheus"],
+  "notes": "Implementation and reviews complete. Live Entra/JWKS validation remains a future roadmap item. Local-first; no live secrets or tenant IDs."
+}

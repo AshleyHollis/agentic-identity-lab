@@ -1,0 +1,14 @@
+# Placeholder values only. Replace before deployment.
+# No real tenant IDs, subscription IDs, or client secrets.
+environment                = "dev"
+location                   = "eastus"
+subscription_id            = "00000000-0000-0000-0000-000000000000"
+tenant_id                  = "00000000-0000-0000-0000-000000000000"
+resource_group_name        = "rg-agentic-identity-dev-aks"
+node_count                 = 1
+blueprint_client_id        = "00000000-0000-0000-0000-000000000201"
+oidc_issuer_url            = "https://placeholder.oidc.issuer/00000000-0000-0000-0000-000000000000"
+workload_identity_subject  = "system:serviceaccount:agentic-lab:agentic-layer-sa"
+workload_identity_audience = "api://AzureADTokenExchange"
+k8s_namespace              = "agentic-lab"
+k8s_service_account_name   = "agentic-layer-sa"

@@ -1,0 +1,21 @@
+name: Security Scan (Validation Only)
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source . --no-git
+
+      # TODO: Add Azure OIDC-powered deployment scans once approved.

@@ -1,6 +1,7 @@
 # ADR-001: Agentic Layer vs. AKS Agent Gateway — Canonical Terminology
 
-> **Status:** Accepted  
+> **Status:** Superseded by ADR-004 (`.squad/architecture/decisions/004-agent-execution-service-naming.md`) — 2026-05-10  
+> The "Agentic Layer" term established here has been replaced by **Agent Execution Service** (approved by Ashley Hollis 2026-05-10T19:30:22.457+10:00). This document is retained as a historical record. The AKS Agent Gateway distinction and all filesystem/runtime backward-compatibility notes from this ADR remain valid and are carried forward into ADR-004.  
 > **Date:** 2026-05-14  
 > **Deciders:** Morpheus (Lead/Architect), Ashley Hollis (Product Owner)  
 > **Phase:** architecture  

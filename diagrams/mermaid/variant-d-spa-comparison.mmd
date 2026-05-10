@@ -1,0 +1,16 @@
+flowchart LR
+  User((User)) --> Entra[Entra ID]
+
+  subgraph SPA_Only[SPA-only]
+    SPA[SPA Client] -->|Delegated token stored in browser| APIA1[API A]
+    APIA1 -->|OBO token (aud: API B)| APIB1[API B]
+  end
+
+  subgraph BFF_Assisted[BFF-assisted]
+    Web[Web App] -->|Session| BFF[BFF]
+    BFF -->|Delegated token (aud: API A)| APIA2[API A]
+    APIA2 -->|OBO token (aud: API B)| APIB2[API B]
+  end
+
+  Entra -->|Delegated token| SPA
+  Entra -->|Auth code| Web

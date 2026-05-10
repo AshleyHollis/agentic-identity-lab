@@ -1,0 +1,10 @@
+sequenceDiagram
+  participant User
+  participant APIA as API A
+  participant Entra as Entra ID
+  participant APIB as API B
+
+  User->>APIA: Call API A (delegated token, aud: API A)
+  APIA->>Entra: OBO exchange (token for aud: API B)
+  Entra-->>APIA: OBO token (aud: API B)
+  APIA->>APIB: Call API B (OBO token)

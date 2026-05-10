@@ -1,0 +1,11 @@
+flowchart LR
+  User((User)) --> EntraHome[Entra ID (Home Tenant)]
+  EntraHome -->|Delegated token (aud: Resource)| APIM[APIM (Resource Tenant)]
+  APIM -->|Forward user token| BFF[BFF/API]
+  BFF -->|OBO token (aud: API B)| APIB[API B]
+
+  subgraph ResourceTenant[Resource Tenant]
+    APIM
+    BFF
+    APIB
+  end

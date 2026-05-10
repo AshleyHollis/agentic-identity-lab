@@ -7,7 +7,7 @@
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up
 #
 # When combined with docker-compose.yml via -f, Docker Compose merges the default network
-# (named "agentic-identity-lab") so that bff, agent-gateway, mcp-protected-api,
+# (named "agentic-identity-lab") so that bff, agent-execution, mcp-protected-api,
 # otel-collector, and jaeger all share one network and resolve each other by service name.
 # Services export OTLP spans to otel-collector:4317 only when this overlay is active.
 #
@@ -50,10 +50,10 @@ services:
       - OTEL_SERVICE_NAME=bff
       - OTEL_SDK_DISABLED=false
 
-  agent-gateway:
+  agent-execution:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=agent-gateway
+      - OTEL_SERVICE_NAME=agent-execution
       - OTEL_SDK_DISABLED=false
 
   mcp-protected-api:

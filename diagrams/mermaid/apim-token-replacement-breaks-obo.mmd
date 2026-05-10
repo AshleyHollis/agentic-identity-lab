@@ -1,0 +1,5 @@
+flowchart LR
+  User((User)) -->|Delegated token (aud: APIM)| APIM[API Management]
+  APIM -->|Replaced with MI token| APIA[API A]
+  APIA -->|OBO fails (no user)| APIB[API B]
+  APIM -.->|Correct path: forward user token| APIA

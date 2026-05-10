@@ -1,0 +1,7 @@
+variant: local
+name: Local Docker Compose
+description: Local-only compose configuration for development.
+deployment_target: local-docker
+compose_files:
+  - docker/docker-compose.yml
+  - docker/docker-compose.single-tenant.yml

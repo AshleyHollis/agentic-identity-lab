@@ -1,0 +1,27 @@
+{
+  "id": "004-apim-policy-alignment",
+  "name": "APIM policy alignment",
+  "status": "complete",
+  "phase": "close",
+  "impact": "medium",
+  "owner": "Morpheus",
+  "requested_by": "Ashley Hollis",
+  "priority": 3,
+  "last_updated": "2026-05-10",
+  "artifacts": {
+    "roadmap": ".squad\\project\\roadmap.md",
+    "readme": ".squad\\specs\\004-apim-policy-alignment\\README.md",
+    "goals": ".squad\\specs\\004-apim-policy-alignment\\goals.md",
+    "research": ".squad\\specs\\004-apim-policy-alignment\\research.md",
+    "requirements": ".squad\\specs\\004-apim-policy-alignment\\requirements.md",
+    "design": ".squad\\specs\\004-apim-policy-alignment\\design.md",
+    "tasks": ".squad\\specs\\004-apim-policy-alignment\\tasks.md",
+    "progress": ".squad\\specs\\004-apim-policy-alignment\\.progress.md"
+  },
+  "dependencies": ["001-token-validation-and-obo", "003-local-delegated-flow-integration"],
+  "reviewers": ["Trinity", "Tank", "Morpheus"],
+  "totalTasks": 6,
+  "completedTasks": 6,
+  "notes": "Spec-first gate applied before Milestone 3 implementation. APIM policy XML/docs are covered by static tests and validation passed."
+}
+

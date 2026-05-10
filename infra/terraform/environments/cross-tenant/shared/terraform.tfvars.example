@@ -1,0 +1,7 @@
+# Placeholder values only. Replace before deployment.
+environment         = "dev"
+location            = "eastus"
+subscription_id     = "00000000-0000-0000-0000-000000000000"
+tenant_id           = "00000000-0000-0000-0000-000000000000"
+tenant_name         = "shared"
+resource_group_name = "rg-agentic-identity-shared-dev"

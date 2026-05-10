@@ -1,0 +1,4 @@
+flowchart LR
+  User((User)) -->|Delegated token aud: API A| APIA[API A]
+  APIA -->|OBO token aud: API B| APIB[API B]
+  APIB -->|OBO token aud: API C| APIC[API C]

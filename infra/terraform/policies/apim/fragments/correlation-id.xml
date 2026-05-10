@@ -1,0 +1,14 @@
+<fragment>
+  <choose>
+    <when condition='@(context.Request.Headers.ContainsKey("x-correlation-id"))'>
+      <set-header name="x-correlation-id" exists-action="override">
+        <value>@(context.Request.Headers.GetValueOrDefault("x-correlation-id", context.RequestId))</value>
+      </set-header>
+    </when>
+    <otherwise>
+      <set-header name="x-correlation-id" exists-action="override">
+        <value>@(context.RequestId)</value>
+      </set-header>
+    </otherwise>
+  </choose>
+</fragment>

@@ -1,0 +1,89 @@
+{
+  "spec_id": "006",
+  "slug": "azure-deployment-baseline",
+  "milestone": "M6",
+  "phase": "spec-prep",
+  "status": "spec-ready",
+  "created": "2026-06-01",
+  "updated": "2026-06-01",
+  "requested_by": "Ashley Hollis",
+  "owners": {
+    "primary": ["Tank", "Neo"],
+    "reviewers": ["Morpheus", "Trinity"]
+  },
+  "impact": "High",
+  "spec_gate_satisfied": false,
+  "implementation_blocked": true,
+  "implementation_blocked_reason": "Spec-first gate: spec artifacts are complete but architectural and security review tasks (T11, T12) must complete before implementation begins. T00 (rename) is also a prerequisite.",
+  "artifacts": {
+    "README.md": "complete",
+    "goals.md": "complete",
+    "research.md": "complete",
+    "requirements.md": "complete",
+    "design.md": "complete",
+    "tasks.md": "complete",
+    "state.json": "complete",
+    ".progress.md": "complete"
+  },
+  "adrs": {
+    "ADR-M6-01": {
+      "question": "ACA as default deployment path vs AKS",
+      "owner": "Morpheus",
+      "status": "pending-review",
+      "decision": null,
+      "decided_by": null,
+      "decided_date": null
+    },
+    "ADR-M6-02": {
+      "question": "Azure Monitor OTLP endpoint vs Log Analytics direct ingestion",
+      "owner": "Tank",
+      "status": "pending-review",
+      "decision": null,
+      "decided_by": null,
+      "decided_date": null
+    },
+    "ADR-M6-03": {
+      "question": "Managed identity assignment strategy: user-assigned vs system-assigned per container app",
+      "owner": "Tank+Trinity",
+      "status": "pending-review",
+      "decision": null,
+      "decided_by": null,
+      "decided_date": null
+    }
+  },
+  "task_status": {
+    "T00": "pending",
+    "T01": "pending",
+    "T02": "pending",
+    "T03": "pending",
+    "T04": "pending",
+    "T05": "pending",
+    "T06": "pending",
+    "T07": "pending",
+    "T08": "pending",
+    "T09": "pending",
+    "T10": "pending",
+    "T11": "pending",
+    "T12": "pending"
+  },
+  "validation_commands": [
+    "python -m pytest",
+    "terraform -chdir=infra\\terraform fmt -check -recursive",
+    "terraform -chdir=infra\\terraform\\environments\\single-tenant-aca init -backend=false",
+    "terraform -chdir=infra\\terraform\\environments\\single-tenant-aca validate",
+    "docker compose -f docker\\docker-compose.yml -f docker\\docker-compose.strict-aca.yml config --quiet"
+  ],
+  "dependencies": {
+    "blocking": ["005-local-runtime-ergonomics", "002-aks-entra-agent-id"],
+    "notes": "M6 Task 0 (T00) depends on Ashley approval of Agent Execution Service naming. All implementation tasks depend on T00 completing (rename) and T11+T12 review sign-offs."
+  },
+  "notes": [
+    "Spec 006 created by Tank (Azure/Terraform/DevOps) as M6 spec-first gate artifact.",
+    "Approved component name: Agent Execution Service (slug: agent-execution). M6 Task 0 (T00) performs the filesystem and Compose rename.",
+    "ACA is the default deployment path per roadmap and Tank charter. AKS optional path from M5 remains available as an advanced track.",
+    "No terraform apply in any public CI workflow. CI validates only (fmt + validate).",
+    "All placeholder values must use {tenant-id}, {subscription-id}, {resource-group} brace tokens or all-zero GUIDs only.",
+    "Azure Monitor tracing is a config-only OTLP endpoint swap — no code change from M5 OTEL instrumentation.",
+    "AUTH_MODE=strict is the deployment gate: no fixture headers accepted, no mock tokens, real JWKS validation required."
+  ]
+}

@@ -4,7 +4,7 @@ services:
       - TENANT_MODE=single-tenant
       - AUTH_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
       - AUTH_JWKS_URL=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
-  agent-gateway:
+  agent-execution:
     environment:
       - TENANT_MODE=single-tenant
       - AUTH_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0

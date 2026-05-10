@@ -1,0 +1,42 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    paths:
+      - infra/terraform/**
+  push:
+    branches: [ main ]
+    paths:
+      - infra/terraform/**
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - infra/terraform/environments/single-tenant
+          - infra/terraform/environments/vendor-shaped-single-tenant
+          - infra/terraform/environments/cross-tenant/tenant-a
+          - infra/terraform/environments/cross-tenant/tenant-b
+          - infra/terraform/environments/cross-tenant/shared
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Terraform init
+        run: terraform -chdir=${{ matrix.env }} init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=${{ matrix.env }} validate
+
+      # TODO: Add OIDC-based deployment workflow once approved.

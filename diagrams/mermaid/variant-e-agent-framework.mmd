@@ -1,0 +1,10 @@
+flowchart LR
+  User((User)) --> Host[Agent Host App]
+  User --> Entra[Entra ID]
+  Entra -->|Delegated token| Host
+
+  Host -->|Delegated token (aud: APIM)| APIM[API Management]
+  APIM -->|Forward user token| BFF[BFF/API]
+  BFF -->|OBO token (aud: API A)| APIA[API A]
+
+  Host -->|Service key / MSI| AOAI[Azure OpenAI / Foundry]

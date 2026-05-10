@@ -1,0 +1,3 @@
+<fragment>
+  <rate-limit-by-key calls="60" renewal-period="60" counter-key='@(context.Request.Headers.GetValueOrDefault("x-client-id", "anonymous"))' />
+</fragment>

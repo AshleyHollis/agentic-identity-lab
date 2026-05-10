@@ -1,0 +1,8 @@
+{
+  "name": "@identity-lab/spa-nextjs",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Placeholder only. Scaffold with create-next-app when ready.\""
+  }
+}

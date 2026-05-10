@@ -1,7 +1,9 @@
 # ADR 0006: Agentic Layer vs. AKS Agent Gateway — Canonical Terminology
 
 ## Status
-Accepted
+Superseded by ADR 0008 (`docs/adr/0008-agent-execution-service-naming.md`) — 2026-05-10.
+The "Agentic Layer" term established here has been replaced by **Agent Execution Service**.
+This document is retained as a historical record. The AKS Agent Gateway distinction remains valid and is carried forward into ADR 0008.
 
 ## Context
 The lab's local application-level orchestration service (`apps/agent-gateway/`) and the standalone

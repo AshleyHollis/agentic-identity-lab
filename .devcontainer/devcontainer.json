@@ -1,0 +1,15 @@
+{
+  "name": "agentic-identity-lab",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-bicep",
+        "ms-vscode.powershell",
+        "ms-vscode.azure-account"
+      ]
+    }
+  },
+  "postCreateCommand": "git --version"
+}

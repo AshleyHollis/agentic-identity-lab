@@ -1,0 +1,8 @@
+flowchart LR
+  User((User)) --> SP[SharePoint Classic Page]
+  User --> Entra[Entra ID]
+  Entra -->|Delegated token| SP
+  SP -->|Delegated token (aud: APIM)| APIM[API Management]
+  APIM -->|Forward user token| BFF[BFF/API]
+  BFF -->|OBO token (aud: API A)| APIA[API A]
+  APIA -->|OBO token (aud: API B)| APIB[API B]

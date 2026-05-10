@@ -1,0 +1,44 @@
+<policies>
+  <inbound>
+    <base />
+    <include-fragment fragment-id="correlation-id" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <!--
+      Validate OBO token from app. Expect header: x-obo-authorization: Bearer {token}.
+      Egress must validate downstream/MCP audience before forwarding.
+    -->
+    <validate-jwt header-name="x-obo-authorization" failed-validation-httpcode="401" failed-validation-error-message="Missing or invalid OBO token" require-scheme="Bearer">
+      <openid-config url="https://login.microsoftonline.com/{tenant-id-placeholder}/v2.0/.well-known/openid-configuration" />
+      <audiences>
+        <audience>api://00000000-0000-0000-0000-000000000103</audience>
+      </audiences>
+      <issuers>
+        <issuer>https://sts.windows.net/{tenant-id-placeholder}/</issuer>
+        <issuer>https://login.microsoftonline.com/{tenant-id-placeholder}/v2.0</issuer>
+      </issuers>
+      <required-claims>
+        <claim name="scp" match="any">
+          <value>mcp.access</value>
+          <value>mcp.write</value>
+        </claim>
+        <claim name="tid" match="any">
+          <value>00000000-0000-0000-0000-000000000001</value>
+          <value>00000000-0000-0000-0000-000000000002</value>
+        </claim>
+      </required-claims>
+    </validate-jwt>
+
+    <set-header name="Authorization" exists-action="override">
+      <value>@(context.Request.Headers.GetValueOrDefault("x-obo-authorization", ""))</value>
+    </set-header>
+    <include-fragment fragment-id="safe-logging" />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

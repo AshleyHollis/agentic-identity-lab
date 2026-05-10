@@ -1,0 +1,28 @@
+name: Docs Validation
+
+on:
+  pull_request:
+    paths:
+      - docs/**
+  push:
+    branches: [ main ]
+    paths:
+      - docs/**
+  workflow_dispatch:
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify deployment docs exist
+        run: |
+          test -f docs/deployment/local-docker-compose.md
+          test -f docs/deployment/azure-container-apps.md
+          test -f docs/deployment/app-service.md
+          test -f docs/deployment/aks-optional.md
+          test -f docs/deployment/single-tenant.md
+          test -f docs/deployment/vendor-shaped-single-tenant.md
+          test -f docs/deployment/cross-tenant.md

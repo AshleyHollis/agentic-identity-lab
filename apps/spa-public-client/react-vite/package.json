@@ -1,0 +1,9 @@
+{
+  "name": "@identity-lab/spa-react-vite",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"Placeholder only. Scaffold with Vite when ready.\""
+  }
+}

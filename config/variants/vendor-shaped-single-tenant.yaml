@@ -1,0 +1,8 @@
+variant: vendor-shaped-single-tenant
+name: Vendor-Shaped Single Tenant
+description: Vendor-shaped single-tenant deployment with custom identity routing.
+deployment_target: azure-container-apps
+terraform_environment: infra/terraform/environments/vendor-shaped-single-tenant
+compose_files:
+  - docker/docker-compose.yml
+  - docker/docker-compose.vendor-shaped.yml

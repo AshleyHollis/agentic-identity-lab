@@ -1,0 +1,11 @@
+variant: cross-tenant
+name: Cross Tenant
+description: Split deployment across tenant A, tenant B, and shared resources.
+deployment_target: azure-container-apps
+terraform_environment:
+  tenant_a: infra/terraform/environments/cross-tenant/tenant-a
+  tenant_b: infra/terraform/environments/cross-tenant/tenant-b
+  shared: infra/terraform/environments/cross-tenant/shared
+compose_files:
+  - docker/docker-compose.yml
+  - docker/docker-compose.cross-tenant.local.yml

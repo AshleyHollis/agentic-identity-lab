@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: Identity Lab MCP Protected API
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /readyz:
+    get:
+      summary: Readiness check
+      responses:
+        "200":
+          description: Ready
+  /whoami:
+    get:
+      summary: Safe claim metadata
+      responses:
+        "200":
+          description: WhoAmI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmI"
+  /debug/claims:
+    get:
+      summary: Debug claim metadata
+      responses:
+        "200":
+          description: Debug claims response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugClaims"
+  /tools/echo:
+    post:
+      summary: Echo tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EchoRequest"
+      responses:
+        "200":
+          description: Echo response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EchoResponse"
+  /tools/authorization-check:
+    post:
+      summary: Authorization check tool
+      responses:
+        "200":
+          description: Authorization check response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationCheckResponse"
+components:
+  schemas:
+    EchoRequest:
+      type: object
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+    EchoResponse:
+      type: object
+      properties:
+        correlation_id:
+          type: string
+        echo:
+          type: object
+          additionalProperties: true
+    AuthorizationCheckResponse:
+      type: object
+      properties:
+        authorized:
+          type: boolean
+        reason:
+          type: string
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        correlation_id:
+          type: string
+    WhoAmI:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        scopes:
+          type: array
+          items:
+            type: string
+        audiences:
+          type: array
+          items:
+            type: string
+        correlation_id:
+          type: string
+    DebugClaims:
+      type: object
+      properties:
+        debug_enabled:
+          type: boolean
+        token_type:
+          type: string
+        claims:
+          type: object
+          additionalProperties: true
+        correlation_id:
+          type: string

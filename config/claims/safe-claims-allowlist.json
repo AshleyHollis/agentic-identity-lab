@@ -1,0 +1,17 @@
+{
+  "allowlist": [
+    "aud",
+    "iss",
+    "tid",
+    "azp",
+    "appid",
+    "scp",
+    "roles",
+    "exp",
+    "nbf",
+    "iat",
+    "ver",
+    "xms_act_fct"
+  ],
+  "notes": "PII claims (name, email, upn, oid, sub) are intentionally excluded. xms_act_fct is actor metadata (appid only — no user PII)."
+}
