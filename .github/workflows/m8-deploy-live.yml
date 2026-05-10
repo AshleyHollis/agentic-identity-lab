@@ -365,6 +365,7 @@ jobs:
             if [[ -z "${app_id}" ]]; then
               continue
             fi
+            app_id="${app_id/\/providers\/Microsoft.App\/containerapps\//\/providers\/Microsoft.App\/containerApps\/}"
             address="${app_to_address[$app_name]}"
             if terraform -chdir="${workdir}" state show "${address}" >/dev/null 2>&1; then
               continue
