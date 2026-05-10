@@ -85,4 +85,10 @@ def load_settings() -> Settings:
             required_scopes=settings.required_scopes,
             trusted_tenants=settings.trusted_tenants,
         )
+        if settings.blueprint_audience == BLUEPRINT_AUDIENCE_PLACEHOLDER:
+            raise ValueError(
+                "Strict auth mode requires BLUEPRINT_AUDIENCE to be set to a real "
+                "audience URI. The placeholder value is not permitted in strict mode "
+                "(T12 binding condition C1)."
+            )
     return settings
