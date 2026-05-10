@@ -8,17 +8,24 @@
 
 ## Terminology Definitions
 
-*(Added: Amendment 001, 2026-05-15 — see also `README.md §Terminology`)*
+*(Updated: Amendment 002, 2026-05-10 — ADR 0008 naming amendment)*
 
-To prevent confusion between the lab's own services and the AKS Agent Gateway, this document uses the following terms consistently (per ADR 0006):
+To prevent confusion between the lab's own services and the AKS Agent Gateway, this document uses
+the following terms consistently (per ADR 0008, superseding ADR 0006):
 
 | Term | Meaning in this document |
 |------|--------------------------|
-| **Agentic Layer** | The lab's app-level orchestration service at `apps/agent-gateway/` (legacy filesystem path; not renamed). The application identity and OBO boundary. |
-| **AKS Agent Gateway** | The agentgateway.dev open-source proxy deployed in AKS as infrastructure; NOT the Agentic Layer |
-| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the Agentic Layer in AKS |
+| **Agent Execution Service** | The lab's app-level agent execution service at `apps/agent-gateway/` (legacy filesystem path; not renamed). The application identity and OBO boundary. Display name: **Identity Lab Agent Execution Service** when org/lab qualification is useful. |
+| **AKS Agent Gateway** | The agentgateway.dev open-source proxy deployed in AKS as infrastructure; NOT the Agent Execution Service |
+| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the Agent Execution Service in AKS |
 
-The `apps/agent-gateway/` directory and Docker Compose service name `agent-gateway` are legacy paths preserved for backward compatibility. All prose references use **Agentic Layer**.
+The `apps/agent-gateway/` directory and Docker Compose service name `agent-gateway` are legacy paths
+preserved for backward compatibility. All new prose references use **Agent Execution Service**.
+
+**Historical note:** During M5 implementation, "Agentic Layer" was the canonical term (ADR 0006).
+This was superseded by "Agent Execution Service" via ADR 0008, approved pre-M6
+(2026-05-10T19:30:22.457+10:00). Existing code, fixtures, and runtime artifacts that use the old
+term remain valid; only documentation uses the new term.
 
 ---
 
@@ -50,7 +57,7 @@ The `apps/agent-gateway/` directory and Docker Compose service name `agent-gatew
 
 **Status:** ✅ Accepted (Morpheus + Trinity — 2026-05-14)
 
-**Decision:** Option A — in-process adapter with `AgentSidecarClient` ABC, swappable for a real HTTP adapter in future live-test opt-in. The interface is designed for drop-in replacement without modifying the Agentic Layer's call sites.
+**Decision:** Option A — in-process adapter with `AgentSidecarClient` ABC, swappable for a real HTTP adapter in future live-test opt-in. The interface is designed for drop-in replacement without modifying the Agent Execution Service's call sites.
 
 **Rationale:** Zero external dependencies in offline mode; preserves offline safety while making the real AKS Agent Gateway sidecar drop-in ready when Trinity approves live testing.
 
@@ -384,7 +391,7 @@ docs/deployment/k8s/
 ├── README.md                      # Context: illustrative only; not applied by CI
 ├── namespace.yaml
 ├── service-account.yaml
-├── agent-gateway-deployment.yaml  # Agentic Layer (`apps/agent-gateway/`) + Entra Agent ID sidecar container (illustrative)
+├── agent-gateway-deployment.yaml  # Agent Execution Service (`apps/agent-gateway/`) + Entra Agent ID sidecar container (illustrative)
 └── network-policy.yaml
 ```
 
@@ -462,7 +469,7 @@ trace_id: <uuid>
 ├─ span: bff.request                [BFF FastAPI]
 │  ├─ identity_lab.auth_mode: mock
 │  ├─ http.route: /api/...
-│  └─ span: agentic-layer.request       [Agentic Layer]
+│  └─ span: agent-execution-svc.request       [Agent Execution Service]
 │     ├─ identity_lab.aud: api://...-0201/access_as_user
 │     ├─ identity_lab.authorized: true
 │     └─ span: agentic-layer.obo.exchange  [OBO boundary]
@@ -473,13 +480,13 @@ trace_id: <uuid>
 
 AKS flow: the BFF originates the trace root and injects `traceparent` into requests routed through
 the AKS Agent Gateway. The AKS Agent Gateway creates its own child span before forwarding to the
-Agentic Layer (in AKS the BFF span is visible as the remote parent in the gateway's span).
+Agent Execution Service (in AKS the BFF span is visible as the remote parent in the gateway's span).
 
 ```
 trace_id: <uuid>
 │
 └─ span: aks-agent-gateway.request         [AKS Agent Gateway — agentgateway.dev, dynamic tracing]
-   └─ span: agentic-layer.request          [Agentic Layer in AKS pod]
+   └─ span: agent-execution-svc.request          [Agent Execution Service in AKS pod]
       ├─ span: sidecar.validate            [Entra Agent ID sidecar — GET /Validate]
       ├─ span: sidecar.downstream-api      [Entra Agent ID sidecar — POST /DownstreamApi/{apiName}]
       │    └─ identity_lab.obo_hop: agent_obo
@@ -495,16 +502,16 @@ precedent set by T03 security review §9; all lab attributes follow the same pre
 | Attribute key | Service | Value / notes |
 |---|---|---|
 | `service.name` | All | `bff`, `agent-gateway`, `mcp-protected-api`, `aks-agent-gateway` |
-| `identity_lab.auth_mode` | Agentic Layer, BFF | Value of `AUTH_MODE` env var (`mock` / `strict`) |
-| `identity_lab.aud` | Agentic Layer | `aud` claim from validated token |
-| `identity_lab.authorized` | Agentic Layer, MCP API | Boolean — `true` or `false` |
+| `identity_lab.auth_mode` | Agent Execution Service, BFF | Value of `AUTH_MODE` env var (`mock` / `strict`) |
+| `identity_lab.aud` | Agent Execution Service | `aud` claim from validated token |
+| `identity_lab.authorized` | Agent Execution Service, MCP API | Boolean — `true` or `false` |
 | `identity_lab.obo_hop` | OBO exchange span | `agent_obo` or `user_obo` |
 | `identity_lab.fixture_name` | All (mock only) | `X-Identity-Lab-Fixture` header value; MUST be blank/omitted in `AUTH_MODE=strict` (T03 §9) |
 | `http.route` | All FastAPI services | Standard OTEL HTTP semconv |
 | `http.method` | All FastAPI services | Standard OTEL HTTP semconv |
 | `http.status_code` | All FastAPI services | Standard OTEL HTTP semconv |
 
-> **service.name note:** The canonical lab service term is "Agentic Layer" (per ADR-001), but
+> **service.name note:** The canonical lab service term is "Agent Execution Service" (per ADR 0008), but
 > `service.name` is set to `agent-gateway` to match the Docker Compose service name. This makes
 > Jaeger service dropdowns consistent with `docker compose ps` output. The AKS Agent Gateway
 > (agentgateway.dev) uses `aks-agent-gateway` to disambiguate from the lab service.
@@ -535,7 +542,7 @@ At the end of M5, a developer MUST be able to:
 1. Start the lab with `docker compose -f docker/docker-compose.yml -f docker/docker-compose.tracing.yml up`.
 2. Make a request through the BFF to the MCP protected API.
 3. Open `http://localhost:16686`, select service `agentic-layer`, click **Find Traces**.
-4. See a complete trace with spans for: BFF → Agentic Layer (auth outcome + audience) → OBO boundary → MCP protected API.
+4. See a complete trace with spans for: BFF → Agent Execution Service (auth outcome + audience) → OBO boundary → MCP protected API.
 5. Expand any span to see `identity_lab.auth_mode`, `identity_lab.authorized`, `identity_lab.obo_hop` attributes.
 
 ### Test Isolation
@@ -550,6 +557,7 @@ At the end of M5, a developer MUST be able to:
 
 | # | Date | Changed By | Summary | Status |
 |---|------|-----------|---------|--------|
-| 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Terminology Definitions section; updated AKS manifest layout to use Agentic Layer naming; added End-to-End Tracing Design (OTEL/Jaeger, span model, static/dynamic config, visualization goal). Implementation remains blocked pending T03. | Approved |
+| 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Terminology Definitions section; updated AKS manifest layout to use Agent Execution Service naming; added End-to-End Tracing Design (OTEL/Jaeger, span model, static/dynamic config, visualization goal). Implementation remains blocked pending T03. | Approved |
 | 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. Span `service.name` values updated to `agentic-layer` / `aks-agent-gateway`. | Applied |
+| 002 | 2026-05-10 | Morpheus (Ashley Hollis approval) | Naming amendment: "Agentic Layer" → **Agent Execution Service** per ADR 0008. Design body, span labels, attribute tables, and AKS manifest comments updated. | Applied — pre-M6 |
 | T17-review | 2026-05-27 | Morpheus | T17 architecture review. Four amendments applied: (1) Docker network note for tracing overlay; (2) span names updated to dot-separated convention and `agentic-layer.obo.exchange` replacing `agent_obo.exchange`; (3) Required Span Attributes table converted to `identity_lab.*` namespace per T03 §9; (4) PII error removed — `jwt.sub` CEL example replaced with `request.path`/`request.method` and prohibition note added. `service.name` for lab service set to `agent-gateway` (Compose name) with architecture note. Verdict: AMENDED → ACCEPTED. T18 and T19 unblocked. | Applied |

@@ -19,7 +19,7 @@ Three candidate libraries were evaluated. The choice has security implications b
 - **SSRF via `jku`/`x5u`**: Some JOSE libraries follow the JWT header's `jku` (JWK Set URL) or `x5u` (X.509 URL) claims to fetch keys. An attacker who can craft a token header can direct the server to fetch an attacker-controlled URL.
 - **Stale key material**: Without a `kid`-miss-retry strategy, a newly rotated key will cause all validations to fail until the TTL expires.
 
-This is a cross-cutting concern: the `JwksCache` and algorithm enforcement logic will be shared across the Agentic Layer, BFF, and MCP Protected API in `apps/shared/python/identity_lab_auth/`.
+This is a cross-cutting concern: the `JwksCache` and algorithm enforcement logic will be shared across the Agent Execution Service, BFF, and MCP Protected API in `apps/shared/python/identity_lab_auth/`.
 
 ## Ranked priorities
 

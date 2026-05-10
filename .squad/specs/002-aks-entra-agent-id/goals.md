@@ -70,7 +70,7 @@ Four Terraform skeletons exist with valid HCL structure:
 Reference-only YAML manifests under `docs/deployment/k8s/` illustrate:
 
 - Namespace and service account with workload identity annotation.
-- Agentic Layer deployment with an Entra Agent ID sidecar container.
+- Agent Execution Service deployment with an Entra Agent ID sidecar container.
 - Network policy restricting sidecar access to localhost only (blocking cross-pod access).
 
 These files are explicitly marked as illustrative/reference; they are not applied by CI.
@@ -105,8 +105,8 @@ No real tenant IDs, subscription IDs, kubeconfigs, client secrets, tokens, or ce
 
 An end-to-end distributed tracing design exists covering every hop in both the local mock flow and the future AKS flow:
 
-- **Mock flow spans:** browser/client → BFF → Agentic Layer → MCP protected API
-- **AKS flow spans:** browser/client → AKS Agent Gateway → Agentic Layer (in AKS) → Entra Agent ID sidecar → APIM → OBO exchange → MCP protected API
+- **Mock flow spans:** browser/client → BFF → Agent Execution Service → MCP protected API
+- **AKS flow spans:** browser/client → AKS Agent Gateway → Agent Execution Service (in AKS) → Entra Agent ID sidecar → APIM → OBO exchange → MCP protected API
 
 The design specifies:
 - OpenTelemetry (OTEL) as the instrumentation standard; Jaeger as the visualization backend (consistent with AKS Agent Gateway's tracing integration).
@@ -136,3 +136,4 @@ Tracing tasks (T17–T20) are added to `tasks.md` but remain blocked behind the 
 |---|------|-----------|---------|--------|
 | 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Success Criterion 10 — End-to-end tracing design (mock + AKS, OTEL/Jaeger, T17–T20). Implementation remains blocked pending T03. | Approved |
 | 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. | Applied |
+| 002 | 2026-05-10 | Morpheus (Ashley Hollis approval) | Naming amendment: "Agentic Layer" → **Agent Execution Service** per ADR 0008. Success criteria and flow descriptions updated. | Applied — pre-M6 |

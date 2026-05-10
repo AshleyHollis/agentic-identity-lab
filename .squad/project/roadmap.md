@@ -33,7 +33,7 @@ Principles
 | M3 | APIM policy alignment | [Spec 004](.squad\specs\004-apim-policy-alignment\README.md) | ✅ Complete | pytest 56 passed; `terraform fmt` + `validate` passed |
 | M4 | Local runtime ergonomics | [Spec 005](.squad\specs\005-local-runtime-ergonomics\README.md) | ✅ Complete | Compose configs passed; `python -m pytest` 65 passed |
 | M5 | AKS + Entra Agent ID + observability | [Spec 002](.squad\specs\002-aks-entra-agent-id\README.md) | ✅ Complete | `python -m pytest` 229 passed; Terraform fmt/init/validate passed; Compose tracing config passed |
-| M6 | Azure deployment baseline | *(spec not yet created)* | 📋 Roadmap | `terraform fmt` + `validate` |
+| M6 | Azure deployment baseline | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | 📋 Spec-ready (gate pending) | `terraform fmt` + `validate` + `python -m pytest` |
 | M7 | Variant client implementations | *(spec not yet created)* | 📋 Roadmap | variant tests + `python -m pytest` |
 
 > **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.
@@ -146,17 +146,17 @@ Principles
 
 | Capability | Details |
 |-----------|---------|
-| **Terminology** | "Agentic Layer" = lab's orchestration service (`apps/agent-gateway/`). "AKS Agent Gateway" = agentgateway.dev infrastructure proxy sidecar. ADRs 0006 + 0007 recorded. |
+| **Terminology (M5)** | "Agentic Layer" = lab's orchestration service during M5 implementation (`apps/agent-gateway/`). "AKS Agent Gateway" = agentgateway.dev infrastructure proxy sidecar. ADRs 0006 + 0007 recorded. *(Note: "Agentic Layer" is superseded by "Agent Execution Service" per ADR 0008, adopted pre-M6.)* |
 | **AKS Terraform skeletons** | `infra/terraform/modules/aks/`, `workload-identity/`, `k8s-bootstrap/`, and `environments/aks/` exist with valid HCL; `terraform fmt -check` and `validate` pass with no live credentials. |
 | **Agent ID sidecar mock boundary** | `AgentSidecarClient` ABC and `MockAgentSidecarClient` implemented. In-process mock resolves from fixture claims, makes zero HTTP calls, enforces localhost-only sidecar URL. |
-| **Blueprint audience validation** | Agentic Layer validates inbound token `aud` against the configured blueprint audience before any Agent OBO exchange; wrong-audience tokens are rejected with 401. |
+| **Blueprint audience validation** | Agent Execution Service validates inbound token `aud` against the configured blueprint audience before any Agent OBO exchange; wrong-audience tokens are rejected with 401. |
 | **Agent ID fixture set** | Seven fixture files in `tests/fixtures/sample-claims/`: happy-path user token, Agent OBO MCP token, wrong-audience, missing-actor, app-only-blueprint, untrusted-tenant, replay-stale. All use all-zero placeholder GUIDs. |
 | **Negative case tests** | Offline pytest tests for all five negative fixtures; each asserts correct rejection without network calls. |
 | **`xms_act_fct` safe-claims** | `config/claims/safe-claims-allowlist.json` and `DEFAULT_SAFE_CLAIM_KEYS` updated for `xms_act_fct`; PII suppression (`oid`, `sub`, etc.) preserved. |
 | **Strict JWKS validation** | `alg:none` and `HS*` rejected at header stage; `kid` required; TTL cache with `kid`-miss retry; strict mode ignores fixture header. Offline tests for each rejection case. |
 | **Illustrative AKS manifests** | `docs/deployment/k8s/` contains `namespace.yaml`, `service-account.yaml`, `agent-gateway-deployment.yaml`, `network-policy.yaml` — all labelled "ILLUSTRATIVE REFERENCE ONLY". |
 | **Three M5 ADRs** | ADR-M5-01 (AKS optional track), ADR-M5-02 (sidecar mock boundary), ADR-M5-03 (JWKS strategy) recorded in `design.md`. |
-| **End-to-end tracing (mock flows)** | OpenTelemetry SDK instruments BFF, Agentic Layer, and MCP Protected API. Jaeger all-in-one runs in Docker Compose. Contributors open `localhost:16686` to see the full request chain as visual spans. |
+| **End-to-end tracing (mock flows)** | OpenTelemetry SDK instruments BFF, Agent Execution Service, and MCP Protected API. Jaeger all-in-one runs in Docker Compose. Contributors open `localhost:16686` to see the full request chain as visual spans. |
 | **AKS Agent Gateway tracing design** | agentgateway.dev's native OTLP → Jaeger pipeline documented; Jaeger UI shows `list_tools`/`call_tool` spans when AKS flows are exercised. |
 | **W3C TraceContext propagation** | `traceparent`/`tracestate` forwarded on all inter-service HTTP calls. |
 | **No PII in traces** | Span attribute allowlist enforced; `oid`, `sub`, raw tokens never in spans. |
@@ -165,9 +165,11 @@ Principles
 
 **Key files:**
 - `.squad\specs\002-aks-entra-agent-id\*` (spec artifacts)
-- `.squad\architecture\decisions\001-agentic-layer-vs-agent-gateway-terminology.md`
+- `.squad\architecture\decisions\001-agentic-layer-vs-agent-gateway-terminology.md` *(superseded — historical record)*
+- `.squad\architecture\decisions\004-agent-execution-service-naming.md` *(pre-M6 naming ADR)*
 - `.squad\architecture\decisions\002-end-to-end-tracing-strategy.md`
-- `docs\adr\0006-agentic-layer-vs-agent-gateway-terminology.md`
+- `docs\adr\0006-agentic-layer-vs-agent-gateway-terminology.md` *(superseded — historical record)*
+- `docs\adr\0008-agent-execution-service-naming.md` *(pre-M6 naming ADR — public counterpart)*
 - `docs\adr\0007-end-to-end-tracing-strategy.md`
 - `apps\shared\python\identity_lab_auth\agent_obo.py`
 - `apps\shared\python\identity_lab_auth\telemetry.py`
@@ -190,23 +192,25 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 ## Milestone 6 — Azure deployment baseline
 
-**Goal:** Implement minimal Terraform wiring for APIM + Container Apps with managed identity ready for OBO (no secrets committed). Migrate tracing backend to Azure Monitor (OTLP endpoint swap).  
-**Owner agents:** Tank, Morpheus  
-**Impact:** Medium-High  
-**Status:** 📋 Roadmap (spec not yet created)
+**Goal:** Implement minimal Terraform wiring for APIM + Container Apps with managed identity ready for OBO (no secrets committed). Migrate tracing backend to Azure Monitor (OTLP endpoint swap). Apply Agent Execution Service rename (M6 Task 0).  
+**Owner agents:** Tank (Lead/Infra), Neo (Backend/Rename)  
+**Reviewers:** Morpheus, Trinity  
+**Impact:** High  
+**Status:** 📋 Spec-ready — [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) complete; awaiting T11 (Morpheus) + T12 (Trinity) review gate and coordinator approval to begin T00–T10.
 
 ### ✅ Done by end of M6 — what works
 
 | Capability | Details |
 |-----------|---------|
-| **Azure deployment** | Terraform deploys APIM + Container Apps to Azure for the `single-tenant` environment. No `terraform apply` in CI — CI validates only. |
-| **Managed identity** | Workload identity and managed identity wired for OBO; no secrets or kubeconfigs committed. |
-| **Deployed delegated flow** | Full request chain works in Azure: browser → APIM → BFF → Agentic Layer → MCP protected API. |
-| **Smoke tests** | Smoke tests run against deployed endpoint from a CI/CD pipeline (no live secret in repo). |
-| **Azure Monitor tracing** | `OTEL_EXPORTER_OTLP_ENDPOINT` set to Azure Monitor OTLP ingestion URL; end-to-end traces visible in Azure portal. No code change from M5 instrumentation. |
-| **`terraform fmt` + `validate`** | Pass for all environments. |
+| **Agent Execution Service rename** | `apps/agent-gateway/` → `apps/agent-execution/`; Compose service `agent-gateway` → `agent-execution`. All imports, CI commands, specs, and docs updated. 229+ tests pass. |
+| **ACA Terraform skeleton** | `infra/terraform/environments/single-tenant-aca/` scaffolded: APIM + Container Apps + App Insights + managed identities. `terraform fmt/validate` passes. No `terraform apply` in CI. |
+| **Managed identity scaffolded** | User-assigned managed identity per service (BFF, Agent Execution Service, MCP Protected API). OBO boundary design preserved from M1/M2. |
+| **Azure Monitor tracing** | `OTEL_EXPORTER_OTLP_ENDPOINT` documented in `.env.example` files as Azure Monitor OTLP placeholder. Config-only swap from M5 Jaeger instrumentation — no code change. |
+| **`AUTH_MODE=strict` enforced** | All three Python services verified to reject fixture headers and require real JWKS in strict mode. `docker-compose.strict-aca.yml` overlay validates. |
+| **CI validation gates** | `terraform fmt` + `init -backend=false` + `validate`, all Compose `config --quiet` checks, `python -m pytest`, no-secret scan — all pass without live credentials. |
+| **ACA deployment docs** | `docs/deployment/aca/README.md` with topology, managed identity model, OTLP swap, and variable substitution guide. Marked ILLUSTRATIVE. |
 
-**Key files:** `infra/terraform/modules/*`, `infra/terraform/environments/*`
+**Key files:** `infra/terraform/modules/*`, `infra/terraform/environments/single-tenant-aca/`, `apps/agent-execution/`, `docker/docker-compose.strict-aca.yml`, `docs/deployment/aca/`
 
 ---
 
@@ -238,7 +242,7 @@ docker compose -f docker\docker-compose.yml -f docker\docker-compose.tracing.yml
 
 | Phase | What is traceable | Visualization |
 |-------|------------------|--------------| 
-| M5 (local/mock) | BFF → Agentic Layer → MCP Protected API (mock flows) | Jaeger UI `localhost:16686` (Docker Compose) |
+| M5 (local/mock) | BFF → Agent Execution Service → MCP Protected API (mock flows) | Jaeger UI `localhost:16686` (Docker Compose) |
 | M5 (AKS flows) | AKS Agent Gateway proxy spans (`list_tools`, `call_tool`) | Same Jaeger UI via agentgateway.dev native integration |
 | M6 (Azure) | Full deployed chain including APIM | Azure Monitor (OTLP endpoint — config-only swap) |
 | M7 (clients) | All variant client → BFF spans | Azure Monitor or Jaeger |

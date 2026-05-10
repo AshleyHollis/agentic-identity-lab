@@ -25,5 +25,5 @@
 - **Project:** agentic-identity-lab
 - **Created:** 2026-05-10
 - **Primary user:** Ashley Hollis
-- **Purpose:** Public reusable Agentic Identity Lab demonstrating delegated identity flow from SharePoint-hosted AI chat through APIM, a BFF, an agentic layer, OBO, and an external MCP-style protected API with Microsoft Entra ID.
+- **Purpose:** Public reusable Agentic Identity Lab demonstrating delegated identity flow from SharePoint-hosted AI chat through APIM, a BFF, an Agent Execution Service, OBO, and an external MCP-style protected API with Microsoft Entra ID.
 - **Public repo constraints:** No secrets, tenant IDs, subscription IDs, generated certificates, or tokens. Use examples only via `.env.example`, `terraform.tfvars.example`, and placeholder GUIDs.

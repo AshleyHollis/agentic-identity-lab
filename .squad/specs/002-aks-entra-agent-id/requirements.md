@@ -20,7 +20,7 @@ All sidecar endpoints in mock/offline mode MUST be exercisable without a real ne
 
 ### FR-02 — Blueprint audience validation (before Agent OBO)
 
-Before any Agent OBO exchange, the agent-gateway MUST validate that the inbound token's audience matches the configured blueprint audience. Tokens with any other `aud` value MUST be rejected with HTTP 401 before the exchange is attempted.
+Before any Agent OBO exchange, the agent-gateway MUST validate that the inbound token's audience matches the configured blueprint audience. Tokens with any other `aud` value MUST be rejected with HTTP 401 before the exchange is attempted. *(In M6+ documentation, this boundary is owned by the Agent Execution Service.)*
 
 **Placeholder blueprint audience:** `api://00000000-0000-0000-0000-000000000201/access_as_user`
 
@@ -179,10 +179,11 @@ The tracing design MUST NOT require a live Azure environment or AKS cluster. A `
 
 All spec artifacts MUST use consistent terminology per ADR 0006 and the definitions in `README.md §Terminology`:
 
-- "Agentic Layer" refers exclusively to the lab's application-level orchestration service at `apps/agent-gateway/` (legacy path; not renamed in the filesystem or Docker Compose).
+- "Agent Execution Service" refers exclusively to the lab's application-level agent execution service at `apps/agent-gateway/` (legacy path; not renamed in the filesystem or Docker Compose). Display name: **Identity Lab Agent Execution Service** when org/lab qualification is useful.
 - "AKS Agent Gateway" refers exclusively to the agentgateway.dev open-source proxy deployed in AKS.
-- Artifacts MUST NOT use the retired term "local app gateway" or unqualified "agent gateway" in prose that could be confused with either canonical term.
-- AKS manifest docs MUST use "Agentic Layer deployment" when describing the lab's FastAPI container, not "agent-gateway deployment".
+- Artifacts MUST NOT use the retired terms "Agentic Layer", "local app gateway", or unqualified "agent gateway" in new prose.
+- AKS manifest docs MUST use "Agent Execution Service deployment" when describing the lab's FastAPI container, not "agent-gateway deployment".
+- **Historical note:** "Agentic Layer" was the M5-era term used during M5 implementation. ADR 0008 supersedes ADR 0006 effective pre-M6.
 
 ### FR-12 — End-to-end tracing design
 
@@ -192,9 +193,9 @@ The design MUST specify end-to-end distributed tracing covering both the mock fl
 
 1. **Span/trace model:**
    - One `trace_id` spans the full request chain from client to MCP protected API.
-   - Each service boundary (BFF, Agentic Layer, MCP protected API) adds a child span.
-   - In the AKS flow, the AKS Agent Gateway adds a parent span before the Agentic Layer span.
-   - The Entra Agent ID sidecar OBO exchange is recorded as a child span of the Agentic Layer span.
+   - Each service boundary (BFF, Agent Execution Service, MCP protected API) adds a child span.
+   - In the AKS flow, the AKS Agent Gateway adds a parent span before the Agent Execution Service span.
+   - The Entra Agent ID sidecar OBO exchange is recorded as a child span of the Agent Execution Service span.
 
 2. **Propagation:** W3C `traceparent` and `tracestate` headers MUST be forwarded at every hop. No service MAY drop the trace context header without recording a span.
 
@@ -224,3 +225,4 @@ The design MUST specify end-to-end distributed tracing covering both the mock fl
 |---|------|-----------|---------|--------|
 | 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added FR-11 (terminology), FR-12 (E2E tracing), NFR-07 (tracing observability). Implementation remains blocked pending T03. | Approved |
 | 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. FR-11 rewritten with canonical terms. | Applied |
+| 002 | 2026-05-10 | Morpheus (Ashley Hollis approval) | Naming amendment: "Agentic Layer" superseded by **Agent Execution Service** per ADR 0008. FR-11 updated to use new canonical term. Historical M5 use of "Agentic Layer" acknowledged. | Applied — pre-M6 |

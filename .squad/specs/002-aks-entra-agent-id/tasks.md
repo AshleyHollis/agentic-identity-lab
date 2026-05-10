@@ -2,9 +2,14 @@
 
 **Spec:** 002-aks-entra-agent-id  
 **Milestone:** M5 — AKS + Entra Agent ID auth exploration  
-**Updated:** 2026-05-14  
+**Updated:** 2026-05-14 (Amendment 002: naming update 2026-05-10)  
 **Primary owners:** Morpheus, Tank, Trinity, Neo  
 **Reviewers:** Morpheus (architecture), Trinity (security)
+
+> **Naming note (Amendment 002, pre-M6):** All references to "Agentic Layer" in this task list
+> reflect the M5-era canonical term used during implementation. The canonical term is now
+> **Agent Execution Service** (ADR 0008). Task text is preserved as historical record; new work
+> items should use the updated term.
 
 ---
 
@@ -331,7 +336,7 @@ python -m pytest
 
 ---
 
-## T12 — Neo: Blueprint Audience Validation in Agentic Layer
+## T12 — Neo: Blueprint Audience Validation in Agent Execution Service
 
 **Owner:** Neo  
 **Depends on:** T11  

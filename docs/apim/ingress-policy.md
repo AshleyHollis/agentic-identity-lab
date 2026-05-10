@@ -40,7 +40,7 @@ Validate **user-delegated tokens** at the API boundary without logging raw token
 
 ## Service-Specific Audience/Scope
 - **BFF**: `aud=api://00000000-0000-0000-0000-000000000101`, `scp=mcp.access`
-- **Agentic Layer**: `aud=api://00000000-0000-0000-0000-000000000102`, `scp=mcp.access|mcp.write`
+- **Agent Execution Service**: `aud=api://00000000-0000-0000-0000-000000000102`, `scp=mcp.access|mcp.write`
 
 ## Notes
 - Validate `aud`, `iss`, `exp`, and required `scp` (delegated-only guard).

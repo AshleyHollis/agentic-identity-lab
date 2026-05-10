@@ -16,13 +16,14 @@ Agent orchestration (e.g., Microsoft Agent Framework) performs tool calls while 
 - Avoid mixing LLM service credentials with user-delegated calls.
 
 ## Roadmap note — AKS + Entra Agent ID (M5)
-- The AKS optional track (Spec 002) deploys the **Agentic Layer** to AKS with an **AKS Agent Gateway**
-  sidecar (agentgateway.dev) for Entra Agent ID token acquisition.
-- The AKS Agent Gateway sidecar is an **infrastructure proxy** — it is not the Agentic Layer.
-  The Agentic Layer contains the orchestration logic; the AKS Agent Gateway sidecar handles Agent ID
-  auth on `localhost` via `/Validate`, `/AuthorizationHeader/{apiName}`, and `/DownstreamApi/{apiName}`.
-- See ADR 0006 (`docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md`) for the canonical
-  terminology decision.
+- The AKS optional track (Spec 002) deploys the **Agent Execution Service** to AKS with an **AKS
+  Agent Gateway** sidecar (agentgateway.dev) for Entra Agent ID token acquisition.
+- The AKS Agent Gateway sidecar is an **infrastructure proxy** — it is not the Agent Execution
+  Service. The Agent Execution Service contains the orchestration logic; the AKS Agent Gateway
+  sidecar handles Agent ID auth on `localhost` via `/Validate`,
+  `/AuthorizationHeader/{apiName}`, and `/DownstreamApi/{apiName}`.
+- See ADR 0008 (`docs/adr/0008-agent-execution-service-naming.md`) for the canonical
+  terminology decision. ADR 0006 is retained as a historical record but is superseded.
 
 ## Implementation notes (TODO)
 - Add agent host skeleton and tool registry.

@@ -8,7 +8,7 @@
 
 ## Context
 
-The lab's identity flows span multiple services (Browser/Client → BFF → Agentic Layer → [AKS Agent Gateway sidecar] → APIM → MCP Protected API). Without trace instrumentation, it is difficult to visualize where a request is, which service is responsible for a failure, and whether token exchanges happen in the correct order.
+The lab's identity flows span multiple services (Browser/Client → BFF → Agent Execution Service → [AKS Agent Gateway sidecar] → APIM → MCP Protected API). Without trace instrumentation, it is difficult to visualize where a request is, which service is responsible for a failure, and whether token exchanges happen in the correct order.
 
 The directive from Ashley Hollis requires:
 - End-to-end tracing across all flows, **including mock/local flows**, so the environment is easy to visualize.
@@ -48,7 +48,7 @@ Instrument all lab services with the OpenTelemetry SDK (Python: `opentelemetry-s
 - W3C TraceContext propagation (`traceparent`/`tracestate`) is the OpenTelemetry default.
 
 **Cons:**
-- Adds `opentelemetry-sdk` and related packages as dependencies to BFF, Agentic Layer, and MCP Protected API services.
+- Adds `opentelemetry-sdk` and related packages as dependencies to BFF, Agent Execution Service, and MCP Protected API services.
 - Mock/test flows will generate trace data; test isolation may require disabling or directing traces to a no-op exporter in unit test mode.
 
 **Score against ranked priorities:**
@@ -99,7 +99,7 @@ We chose **Option 1**: OpenTelemetry SDK instrumentation for all lab services, J
 [BFF]  ──── OTLP span ──────────────────────────────────────┐
       │  traceparent forwarded                               │
       ▼                                                      │
-[Agentic Layer]  ─── OTLP span ───────────────────────────────┤
+[Agent Execution Service]  ─── OTLP span ───────────────────────────────┤
       │  (AKS: AKS Agent Gateway sidecar emits its own spans) │
       ▼                                                      │
 [APIM]  ─── (future: Azure Monitor span) ─────────────────────┤
@@ -165,7 +165,7 @@ Option 1 satisfies all four priorities. It aligns with the agentgateway.dev pipe
 
 **M5 implementation tasks (add to Spec 002 or new Spec 006-tracing):**
 - Add `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-grpc` to service requirements.
-- Instrument BFF, Agentic Layer, and MCP Protected API with `tracer.start_as_current_span()`.
+- Instrument BFF, Agent Execution Service, and MCP Protected API with `tracer.start_as_current_span()`.
 - Forward `traceparent`/`tracestate` on outbound HTTP calls.
 - Add Jaeger all-in-one to Docker Compose.
 - Add OTEL env vars to `.env.example` files.
@@ -177,7 +177,7 @@ Option 1 satisfies all four priorities. It aligns with the agentgateway.dev pipe
 ## Review checkpoints
 
 - [ ] M5 implementation start: Jaeger container added to Docker Compose; BFF span confirmed visible in Jaeger UI.
-- [ ] M5 gate: Trace visualization confirmed for BFF → Agentic Layer → MCP Protected API mock flow.
+- [ ] M5 gate: Trace visualization confirmed for BFF → Agent Execution Service → MCP Protected API mock flow.
 - [ ] M6 gate: Azure Monitor OTLP endpoint tested; traces visible in Azure portal.
 - [ ] Re-review trigger: if `sanitize_claims()` rules change, re-verify span attribute allowlist.
 

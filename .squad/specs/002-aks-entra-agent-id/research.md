@@ -218,10 +218,10 @@ The lab uses "agent-gateway" as the directory and service name for its FastAPI o
 
 | Term | Meaning |
 |------|---------|
-| **Agentic Layer** | The lab's app-level orchestration service at `apps/agent-gateway/` (legacy path; not renamed) |
+| **Agent Execution Service** | The lab's app-level agent execution service at `apps/agent-gateway/` (legacy path; not renamed) |
 | **AKS Agent Gateway** | The agentgateway.dev open-source proxy, deployed in AKS as infrastructure |
 
-**Key rule:** the AKS Agent Gateway is not the lab's Agentic Layer. In the AKS scenario, the AKS Agent Gateway sits in front of the Agentic Layer as an ingress/MCP proxy; the Agentic Layer and MCP protected API remain the lab's application identity boundary.
+**Key rule:** the AKS Agent Gateway is not the lab's Agent Execution Service. In the AKS scenario, the AKS Agent Gateway sits in front of the Agent Execution Service as an ingress/MCP proxy; the Agent Execution Service and MCP protected API remain the lab's application identity boundary.
 
 ### 8.2 AKS Agent Gateway Tracing (agentgateway.dev)
 
@@ -253,7 +253,7 @@ The AKS Agent Gateway integrates with **Jaeger** as the tracing platform via an 
 [BFF — FastAPI]
     │ propagate traceparent
     ▼
-[Agentic Layer — FastAPI]
+[Agent Execution Service — FastAPI]
     │ propagate traceparent; OBO boundary span
     ▼
 [MCP Protected API — FastAPI]
@@ -269,7 +269,7 @@ The AKS Agent Gateway integrates with **Jaeger** as the tracing platform via an 
 [AKS Agent Gateway — agentgateway.dev]
     │ propagate traceparent; dynamic tracing span
     ▼
-[Agentic Layer — deployed in AKS pod]
+[Agent Execution Service — deployed in AKS pod]
     │ propagate traceparent; blueprint audience validation span
     ▼
 [Entra Agent ID Sidecar — localhost only]
@@ -291,3 +291,4 @@ All spans within the lab's Python services use OTEL SDK (`opentelemetry-sdk`, `o
 |---|------|-----------|---------|--------|
 | 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Added Section 8 — terminology disambiguation, AKS Agent Gateway tracing reference (OTEL/Jaeger), E2E trace flow diagrams for mock and AKS. | Approved |
 | 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. | Applied |
+| 002 | 2026-05-10 | Morpheus (Ashley Hollis approval) | Naming amendment: "Agentic Layer" → **Agent Execution Service** per ADR 0008. Terminology table and diagrams updated. | Applied — pre-M6 |

@@ -13,11 +13,12 @@
 
 | Term | Meaning |
 |------|---------|
-| **Agentic Layer** | The lab's app-level orchestration service at `apps/agent-gateway/` (Docker Compose service: `agent-gateway`). Handles agent tool calls, identity context, and OBO boundaries. |
-| **AKS Agent Gateway** | The [agentgateway.dev](https://agentgateway.dev) open-source MCP protocol proxy deployed as infrastructure in AKS. Not the Agentic Layer. |
-| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the Agentic Layer in AKS. Exposes `/Validate`, `/AuthorizationHeader/{apiName}`, and `/DownstreamApi/{apiName}` on `localhost` only. |
+| **Agent Execution Service** | The lab's app-level agent execution service at `apps/agent-gateway/` (Docker Compose service: `agent-gateway` — legacy). Handles agent tool calls, identity context, and OBO boundaries. Display name: **Identity Lab Agent Execution Service** when org/lab context is useful. |
+| **AKS Agent Gateway** | The [agentgateway.dev](https://agentgateway.dev) open-source MCP protocol proxy deployed as infrastructure in AKS. Not the Agent Execution Service. |
+| **Entra Agent ID sidecar** | The Entra Agent ID SDK container running in the same pod as the Agent Execution Service in AKS. Exposes `/Validate`, `/AuthorizationHeader/{apiName}`, and `/DownstreamApi/{apiName}` on `localhost` only. |
 
-See ADR `docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md` for the full canonical term map.
+See ADR `docs/adr/0008-agent-execution-service-naming.md` for the full canonical term map.
+*(Historical note: ADR `docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md` used "Agentic Layer" for this service during M5; superseded by ADR 0008.)*
 
 ---
 
@@ -25,9 +26,9 @@ See ADR `docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md` for the fu
 
 | File | Purpose |
 |------|---------|
-| `namespace.yaml` | Kubernetes namespace for Agentic Layer workloads |
+| `namespace.yaml` | Kubernetes namespace for Agent Execution Service workloads |
 | `service-account.yaml` | Service account with Azure Workload Identity annotations |
-| `agent-gateway-deployment.yaml` | Agentic Layer pod spec with Entra Agent ID sidecar container |
+| `agent-gateway-deployment.yaml` | Agent Execution Service pod spec with Entra Agent ID sidecar container |
 | `network-policy.yaml` | NetworkPolicy preventing cross-pod access to the sidecar port |
 
 ---
@@ -39,7 +40,7 @@ See ADR `docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md` for the fu
 │  Namespace: agent-workloads                                                   │
 │                                                                               │
 │  ┌─ Pod: agent-gateway ─────────────────────────────────────────────────┐    │
-│  │  Container: agentic-layer          (port 8000 — external-accessible) │    │
+│  │  Container: agent-execution-svc    (port 8000 — external-accessible) │    │
 │  │  Container: entra-agent-id-sidecar (port 9090 — localhost only)      │    │
 │  │                                                                       │    │
 │  │  Pod annotation: azure.workload.identity/use: "true"                 │    │
@@ -47,18 +48,18 @@ See ADR `docs/adr/0006-agentic-layer-vs-agent-gateway-terminology.md` for the fu
 │         ↑                                                                     │
 │  ┌─ AKS Agent Gateway pod ──────┐                                            │
 │  │  (agentgateway.dev proxy)    │ ←── inbound MCP/HTTP traffic               │
-│  │  Routes to Agentic Layer     │                                            │
+│  │  Routes to Agent Exec Svc    │                                            │
 │  └──────────────────────────────┘                                            │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 The **AKS Agent Gateway** (agentgateway.dev) is a separate pod that proxies inbound
-MCP protocol traffic to the Agentic Layer. It is infrastructure only — it does not
+MCP protocol traffic to the Agent Execution Service. It is infrastructure only — it does not
 contain the application logic in `apps/agent-gateway/`.
 
-The **Entra Agent ID sidecar** runs in the same pod as the Agentic Layer. The Agentic
-Layer calls the sidecar on `http://localhost:9090` for token validation and Agent OBO
-exchange. The sidecar port is never reachable from outside the pod.
+The **Entra Agent ID sidecar** runs in the same pod as the Agent Execution Service. The
+Agent Execution Service calls the sidecar on `http://localhost:9090` for token validation
+and Agent OBO exchange. The sidecar port is never reachable from outside the pod.
 
 ---
 

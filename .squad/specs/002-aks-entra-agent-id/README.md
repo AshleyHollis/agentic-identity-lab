@@ -11,15 +11,17 @@
 
 ## Terminology
 
-> **Amendment 001 (2026-05-15):** Explicit terminology required to prevent reader confusion between three distinct concepts.
+> **Amendment 002 (2026-05-10 — pre-M6 naming):** "Agentic Layer" superseded by **Agent Execution Service** per ADR 0008. See amendment table below.
 
 | Term | Definition |
 |------|-----------|
-| **Agentic Layer** | The lab's app-level orchestration service at `apps/agent-gateway/` (legacy filesystem path; not renamed). The application identity boundary for agent tool calls, OBO exchanges, and multi-step agent flows. Referred to as the Docker Compose service `agent-gateway` and in legacy path references, but canonically called the **Agentic Layer** in all documentation (per ADR 0006). |
-| **AKS Agent Gateway** | The standalone [agentgateway.dev](https://agentgateway.dev) infrastructure proxy — deployed as a sidecar or ingress component in AKS. An infrastructure-layer MCP protocol proxy; **not** the lab's Agentic Layer. |
+| **Agent Execution Service** | The lab's app-level agent execution service at `apps/agent-gateway/` (legacy filesystem path; not renamed). The application identity boundary for agent tool calls, OBO exchanges, and multi-step agent flows. Display name: **Identity Lab Agent Execution Service** when org/lab qualification is useful. Referred to as Docker Compose service `agent-gateway` (legacy) but canonically called the **Agent Execution Service** in all documentation (per ADR 0008). |
+| **AKS Agent Gateway** | The standalone [agentgateway.dev](https://agentgateway.dev) infrastructure proxy — deployed as a sidecar or ingress component in AKS. An infrastructure-layer MCP protocol proxy; **not** the lab's Agent Execution Service. |
 | **Entra Agent ID sidecar** | The Microsoft Entra Agent ID SDK running as a sidecar container alongside the agent workload in AKS. Distinct from all of the above. |
 
-**Rule:** The lab's orchestration service is the **Agentic Layer** (`apps/agent-gateway/`). When referencing the standalone agentgateway.dev proxy, always use **AKS Agent Gateway**. Unqualified "agent gateway" is retired in spec prose (superseded by ADR 0006).
+**Rule:** The lab's orchestration service is the **Agent Execution Service** (`apps/agent-gateway/`). When referencing the standalone agentgateway.dev proxy, always use **AKS Agent Gateway**. Unqualified "agent gateway" is retired in spec prose. Do not use unqualified "Agent Service" (collision with Azure AI Agent Service).
+
+**Historical note:** During M5 implementation, "Agentic Layer" was the canonical term (ADR 0006). This was superseded by "Agent Execution Service" via ADR 0008, adopted pre-M6.
 
 ---
 
@@ -36,7 +38,7 @@ This spec defines the Agent ID sidecar contract, offline fixture strategy, safe-
 - Safe-claims allowlist extension for non-PII actor metadata (`xms_act_fct`) while continuing to suppress `oid`, `sub`, `email`, `upn`, `name`, `preferred_username`.
 - Agent OBO sidecar mock boundary module: validates blueprint audience before exchange, enforces localhost-only sidecar URL, no network calls in offline tests, sanitized output claims, separate from MCP user OBO and Azure OpenAI/Foundry managed identity.
 - AKS Terraform module skeletons (`aks`, `workload-identity`, `k8s-bootstrap`) and environment overlay (`environments/aks/`).
-- Illustrative AKS manifests/docs: namespace, service account with workload identity annotation, Agentic Layer deployment with Entra Agent ID sidecar, network policy preventing cross-pod sidecar access.
+- Illustrative AKS manifests/docs: namespace, service account with workload identity annotation, Agent Execution Service deployment with Entra Agent ID sidecar, network policy preventing cross-pod sidecar access.
 - Strict JWT/JWKS validation design and tests: reject `alg:none`, reject `HS*`, enforce `kid`, preserve claim checks, ignore fixture header in strict mode, safe JWKS caching.
 - End-to-end distributed tracing design for mock and AKS flows using OpenTelemetry + Jaeger, covering visualization goals, span/correlation expectations, and mock-flow instrumentation.
 - Three ADR decisions: AKS optional track, Agent ID sidecar mock boundary, JWKS client/caching strategy.
@@ -97,3 +99,4 @@ No-secret scan: no real tenant IDs, subscription IDs, tokens, kubeconfigs, or cl
 |---|------|-----------|---------|--------|
 | 001 | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology clarification (Agentic Layer vs AKS Agent Gateway); E2E tracing requirements (mock + AKS, OTEL/Jaeger); roadmap milestone outcome clarity; tasks T17–T20 added. Implementation remains blocked pending T03. | Approved |
 | 001-correction | 2026-05-15 | spec-feature (Ashley Hollis) | Terminology corrected per ADR 0006: "local app gateway" → **Agentic Layer**; "standalone Agent Gateway" → **AKS Agent Gateway**. Earlier draft used "local app gateway" for the `apps/agent-gateway/` service — superseded by ADR 0006 accepted by Morpheus. | Applied |
+| 002 | 2026-05-10 | Morpheus (Ashley Hollis approval) | Naming amendment: "Agentic Layer" superseded by **Agent Execution Service** per ADR 0008. Terminology table and body text updated. Historical M5 use of "Agentic Layer" acknowledged. | Applied — pre-M6 |
