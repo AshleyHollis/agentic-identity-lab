@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t08-runtime-configuration-verification",
-  "status": "t07-protected-live-deployment-complete-t08-in-progress",
+  "phase": "implement-t12-redacted-evidence-package",
+  "status": "t08-through-t11-live-runtime-smoke-trace-verification-complete-t12-in-progress",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -48,7 +48,8 @@
     ".squad\\decisions\\inbox\\trinity-m9-rg-rbac-review.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-runtime-vars-t04-readiness.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete",
-    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal-success.md": "complete"
+    ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal-success.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md": "in-progress"
   },
   "adrs": {
     "ADR-M9-01": "Reuse M8 protected workflow family",
@@ -65,11 +66,11 @@
     "T05": "complete-protected-start-resume-and-nightly-shutdown-dry-runs-succeeded",
     "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
     "T07": "complete-protected-live-deploy-run-25642915504-succeeded",
-    "T08": "in-progress",
-    "T09": "pending",
-    "T10": "pending",
-    "T11": "pending",
-    "T12": "pending",
+    "T08": "complete-runtime-config-and-telemetry-verified",
+    "T09": "complete-protected-live-smoke-run-25644428588-succeeded",
+    "T10": "complete-positive-kql-chain-run-25644428588-succeeded",
+    "T11": "complete-negative-leakage-query-run-25644428588-succeeded",
+    "T12": "in-progress",
     "T13": "pending",
     "T14": "pending",
     "T15": "pending",
@@ -77,7 +78,7 @@
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "t07-protected-live-deployment-complete-runtime-verification-in-progress",
+    "status": "t08-through-t11-live-runtime-smoke-trace-verification-complete-evidence-in-progress",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
@@ -122,7 +123,12 @@
     "t07_live_deploy_run": "25642915504-success",
     "t07_live_deploy_scope": "image-publish-terraform-apply-aca-image-rollout",
     "t07_aca_rollout_status": "all-container-apps-succeeded-running-target-port-8000",
-    "t08_runtime_verification_status": "in-progress"
+    "t08_runtime_verification_status": "complete-strict-auth-appinsights-private-acr-target-port-8000-and-aca-running-state-verified",
+    "t09_live_smoke_run": "25644428588-success",
+    "t10_positive_kql_chain": "25644428588-success-bff-agent-execution-mcp-roles-observed",
+    "t11_negative_leakage": "25644428588-success-zero-forbidden-token-or-pii-hits",
+    "t09_t11_cleanup_status": "agent-execution-and-mcp-restored-to-internal-ingress-and-min-replicas-0",
+    "t12_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [

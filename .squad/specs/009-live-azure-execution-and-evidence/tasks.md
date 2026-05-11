@@ -10,11 +10,11 @@
 | T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | ✅ Complete (protected start/resume and nightly shutdown dry-runs passed) |
 | T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
 | T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `25642915504` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
-| T08 | Runtime configuration verification | Tank / Neo | T07 | In progress |
-| T09 | Browser smoke execution | Mouse / Neo | T08 | Pending |
-| T10 | Positive KQL chain verification | Neo | T09 | Pending |
-| T11 | Negative leakage verification | Trinity / Neo | T09 | Pending |
-| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | Pending |
+| T08 | Runtime configuration verification | Tank / Neo | T07 | ✅ Complete (ACA/APIM runtime posture verified; strict auth/App Insights/runtime ports confirmed; run `25644428588` also verified live runtime telemetry) |
+| T09 | Browser smoke execution | Mouse / Neo | T08 | ✅ Complete (protected live smoke run `25644428588`) |
+| T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete (protected Azure Monitor KQL verification in run `25644428588` observed BFF, Agent Execution, and MCP roles) |
+| T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete (protected run `25644428588` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
+| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress |
 | T13 | Cost-control shutdown verification | Tank | T09 | Pending |
 | T14 | Deployment readiness review | Tank | T01-T08, T13 | Pending |
 | T15 | Security/evidence review | Trinity | T03, T11, T12 | Pending |
