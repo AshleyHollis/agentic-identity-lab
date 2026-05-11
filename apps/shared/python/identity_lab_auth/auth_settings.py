@@ -75,6 +75,7 @@ def load_strict_claims_from_authorization(
     jwks_url: str,
     allowed_audiences: list[str],
     issuer: str | None = None,
+    allowed_issuers: list[str] | None = None,
 ) -> dict[str, Any] | None:
     token = extract_bearer_token(authorization)
     if token is None:
@@ -85,6 +86,7 @@ def load_strict_claims_from_authorization(
             _strict_jwks_cache(jwks_url),
             allowed_audiences=allowed_audiences,
             issuer=issuer,
+            allowed_issuers=allowed_issuers,
         )
     except Exception as exc:
         raise ValueError("strict_token_validation_failed") from exc

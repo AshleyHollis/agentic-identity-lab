@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "status": 200,
+  "sessionIdPresent": true,
+  "expiresAtPresent": true,
+  "resultSource": "direct-bff-az-token-v1-issuer",
+  "targetUrlDigest": "e386031498e8",
+  "timestamp": "20260511T182636Z",
+  "chain": "BFF->OBO->AgentExecution->MCP",
+  "notes": "Full E2E verified: BFF accepted v1 delegated token, performed OBO exchange, Agent Execution accepted OBO token, MCP chain completed. HTTP 200 with session_id and expires_at returned."
+}

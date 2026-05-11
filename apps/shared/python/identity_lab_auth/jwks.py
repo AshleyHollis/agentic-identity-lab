@@ -126,6 +126,7 @@ def validate_strict(
     *,
     allowed_audiences: list[str],
     issuer: str | None = None,
+    allowed_issuers: list[str] | None = None,
 ) -> dict[str, Any]:
     """Validate *token* in strict mode using *cache* for JWKS key lookup.
 
@@ -138,6 +139,10 @@ def validate_strict(
 
     ``jku``/``x5u`` suppression: the JWKS URL is never derived from token content;
     only ``cache.jwks_url`` (set from ``AUTH_JWKS_URL`` config) is used.
+
+    ``allowed_issuers``: when provided (multi-value list), takes precedence over
+    ``issuer`` and enables accepting both v1 (sts.windows.net) and v2
+    (login.microsoftonline.com) Entra tokens without a code rebuild.
 
     Returns sanitized claims dict on success. Raises ``ValueError`` on any
     validation failure.
@@ -158,14 +163,30 @@ def validate_strict(
     jwk_data = cache.get_key(kid)
     public_key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk_data)
 
-    # 5. Verify signature + standard claims
+    # 5. Verify signature + standard claims.
+    # When multiple issuers are accepted, skip PyJWT's built-in issuer check
+    # (which accepts only a single string) and perform the check manually after
+    # signature verification.
+    effective_issuers = [v.strip() for v in (allowed_issuers or []) if v.strip()]
+    if effective_issuers:
+        # Multi-issuer path: skip PyJWT issuer validation; check manually below.
+        jwt_issuer = None
+    else:
+        jwt_issuer = issuer
+
     decode_options: dict[str, Any] = {"require": ["exp", "nbf", "aud", "iss"]}
     claims = jwt.decode(
         token,
         public_key,
         algorithms=[canonical_alg],  # explicit allowlist — no autodiscovery
         audience=allowed_audiences,
-        issuer=issuer,
+        issuer=jwt_issuer,
         options=decode_options,
     )
+
+    if effective_issuers:
+        claim_iss = claims.get("iss", "")
+        if not isinstance(claim_iss, str) or claim_iss.strip() not in effective_issuers:
+            raise ValueError(f"Issuer '{claim_iss}' not in allowed issuers")
+
     return claims

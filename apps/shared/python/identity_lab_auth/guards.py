@@ -97,14 +97,24 @@ def validate_claims(
     trusted_tenants: Iterable[str] | str | None,
     clock_skew_seconds: int = 300,
     now: float | None = None,
+    allowed_issuers: Sequence[str] | None = None,
 ) -> list[str]:
     failures: list[str] = []
-    expected_issuer = issuer.strip() if isinstance(issuer, str) and issuer.strip() else None
-    if expected_issuer:
+    # Build the effective set of accepted issuers.
+    # ``allowed_issuers`` (multi-value) takes precedence over ``issuer``
+    # (single-value) so callers can accept both v1 sts.windows.net and
+    # v2 login.microsoftonline.com issuers without a code rebuild.
+    effective_issuers: set[str] = set()
+    if allowed_issuers:
+        effective_issuers = {v.strip() for v in allowed_issuers if isinstance(v, str) and v.strip()}
+    elif isinstance(issuer, str) and issuer.strip():
+        effective_issuers = {issuer.strip()}
+
+    if effective_issuers:
         claim_issuer = claims.get("iss")
         if not isinstance(claim_issuer, str) or not claim_issuer.strip():
             failures.append("missing_issuer")
-        elif claim_issuer.strip() != expected_issuer:
+        elif claim_issuer.strip() not in effective_issuers:
             failures.append("invalid_issuer")
 
     trusted = _normalize_required(trusted_tenants)
