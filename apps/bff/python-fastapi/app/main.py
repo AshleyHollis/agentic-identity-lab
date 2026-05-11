@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, FastAPI, Request
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,7 @@ from .diagnostics import build_health_payload, build_ready_payload
 
 from identity_lab_auth import AUTH_FIXTURE_HEADER, AuthMode
 from identity_lab_auth.telemetry import (
+    get_tracer,
     setup_telemetry,
     instrument_fastapi,
     record_auth_attributes,
@@ -22,6 +24,7 @@ from identity_lab_auth.telemetry import (
 
 settings = load_settings()
 setup_telemetry(settings.service_name)
+tracer = get_tracer("identity_lab.bff")
 app = FastAPI(title=settings.service_name, version="0.1.0")
 instrument_fastapi(app)
 
@@ -47,6 +50,51 @@ class ChatSessionRequest(BaseModel):
     # display_name is display/context only. Identity is established solely by the
     # validated bearer token. Never use display_name for authorization decisions.
     display_name: str | None = Field(default=None, max_length=255)
+
+
+def _build_forward_headers(request: Request, auth_context: AuthContext) -> dict[str, str]:
+    headers: dict[str, str] = {
+        settings.correlation_header: auth_context.correlation_id or "",
+    }
+    authorization = request.headers.get("authorization")
+    if authorization:
+        headers["Authorization"] = authorization
+    traceparent = request.headers.get("traceparent")
+    if traceparent:
+        headers["traceparent"] = traceparent
+    return headers
+
+
+def _invoke_agent_execution(
+    request: Request,
+    auth_context: AuthContext,
+) -> None:
+    if not settings.chat_session_chain_enabled:
+        return
+    url = f"{settings.agent_execution_base_url}{settings.agent_invoke_path}"
+    payload = {
+        "payload": {"operation": "chat_session"},
+        "metadata": {"entrypoint": "bff.chat_session"},
+    }
+    headers = _build_forward_headers(request, auth_context)
+    with tracer.start_as_current_span("identity_lab.bff.call_agent_execution"):
+        try:
+            response = httpx.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=settings.downstream_timeout_seconds,
+            )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="agent_execution_unreachable",
+            ) from exc
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="agent_execution_error",
+        )
 
 
 @app.middleware("http")
@@ -108,6 +156,7 @@ def debug_claims(auth_context: AuthContext = Depends(get_auth_context)) -> dict[
 
 @app.post("/chat/session")
 def create_chat_session(
+    request: Request,
     request_body: ChatSessionRequest | None = None,
     auth_context: AuthContext = Depends(get_auth_context),
 ) -> dict[str, str]:
@@ -115,6 +164,7 @@ def create_chat_session(
     # It MUST NOT be used as an authorization gate, database key, or downstream trust signal.
     # Session authorization is based solely on aud, scp, tid, and iss validation.
     _ = request_body
+    _invoke_agent_execution(request, auth_context)
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     return {

@@ -17,6 +17,10 @@ services:
       - TRUSTED_TENANTS=00000000-0000-0000-0000-000000000000
       - CORRELATION_HEADER=x-correlation-id
       - ENABLE_DEBUG_CLAIMS=false
+      - CHAT_SESSION_CHAIN_ENABLED=false
+      - AGENT_EXECUTION_BASE_URL=http://agent-execution:8080
+      - AGENT_EXECUTION_INVOKE_PATH=/agent/invoke
+      - DOWNSTREAM_TIMEOUT_SECONDS=10
       # AUTH_ISSUER and AUTH_JWKS_URL are not set here — only needed for AUTH_MODE=strict (M6 overlay)
     healthcheck:
       test: ["CMD", "python", "-c",
@@ -49,6 +53,10 @@ services:
       - TRUSTED_TENANTS=00000000-0000-0000-0000-000000000000
       - CORRELATION_HEADER=x-correlation-id
       - ENABLE_DEBUG_CLAIMS=false
+      - MCP_CHAIN_ENABLED=false
+      - MCP_PROTECTED_API_BASE_URL=http://mcp-protected-api:8080
+      - MCP_AUTHORIZATION_CHECK_PATH=/tools/authorization-check
+      - DOWNSTREAM_TIMEOUT_SECONDS=10
       # AUTH_ISSUER and AUTH_JWKS_URL are not set here — only needed for AUTH_MODE=strict (M6 overlay)
     healthcheck:
       test: ["CMD", "python", "-c",

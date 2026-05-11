@@ -1,6 +1,6 @@
 # Agent Execution Service (FastAPI)
 
-Agent Execution Service that enforces delegated-token auth and performs a local/mock OBO exchange for downstream MCP calls.
+Agent Execution Service that enforces delegated-token auth, performs OBO claim exchange for MCP audience, and can execute a live MCP authorization check hop.
 
 ## Endpoints
 - GET `/healthz`
@@ -11,7 +11,16 @@ Agent Execution Service that enforces delegated-token auth and performs a local/
 - POST `/agent/invoke-modern`
 - POST `/agent/invoke-low-change`
 
-Invoke endpoints validate the inbound service audience and mint mock downstream claims for the MCP audience. They must not forward the inbound `Authorization` value to MCP.
+Invoke endpoints validate the inbound service audience and mint downstream OBO claims for the MCP audience. They must not forward the inbound `Authorization` value to MCP.
+
+When `MCP_CHAIN_ENABLED=true`, invoke endpoints call MCP `POST /tools/authorization-check` using the exchanged OBO authorization header to exercise the delegated chain.
+
+### Downstream chain settings
+
+- `MCP_CHAIN_ENABLED` (default: `false`)
+- `MCP_PROTECTED_API_BASE_URL` (required when chain is enabled)
+- `MCP_AUTHORIZATION_CHECK_PATH` (default: `/tools/authorization-check`)
+- `DOWNSTREAM_TIMEOUT_SECONDS` (default: `10`)
 
 ## Run locally (Windows)
 1. Copy `config/env/agent-execution.env.example` to `config/env/agent-execution.env` and update as needed.

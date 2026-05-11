@@ -11,6 +11,9 @@ _REQUIRED_WORKFLOW_TOKENS = (
     "live_azure_tests",
     "LIVE_AZURE_TESTS",
     "m8_browser_smoke_harness.py",
+    "M9_PLAYWRIGHT_CHAT_URL",
+    "M9_PLAYWRIGHT_ACCESS_TOKEN",
+    "python -m playwright install chromium",
     "m8_smoke_trace_contract.py evaluate",
 )
 
@@ -101,6 +104,7 @@ def evaluate_trace_results(
     positive_rows: list[dict[str, object]],
     negative_rows: list[dict[str, object]],
     required_roles: tuple[str, ...] = _DEFAULT_REQUIRED_ROLES,
+    required_operations: tuple[str, ...] = (),
 ) -> list[str]:
     offenders: list[str] = []
 
@@ -114,6 +118,36 @@ def evaluate_trace_results(
 
     if not positive_rows:
         offenders.append("positive trace results are empty")
+
+    if required_operations:
+        haystack = "\n".join(
+            [
+                " ".join(
+                    str(row.get(key, ""))
+                    for key in (
+                        "name",
+                        "Name",
+                        "url",
+                        "Url",
+                        "target",
+                        "Target",
+                        "message",
+                        "Message",
+                        "data",
+                        "Data",
+                    )
+                ).lower()
+                for row in positive_rows
+            ]
+        )
+        missing_operations = [
+            operation for operation in required_operations if operation.lower() not in haystack
+        ]
+        if missing_operations:
+            offenders.append(
+                "positive trace results missing required operations: "
+                + ", ".join(missing_operations)
+            )
 
     if negative_rows:
         offenders.append(f"negative leakage query returned {len(negative_rows)} rows")
@@ -155,8 +189,14 @@ def _evaluate_command(args: argparse.Namespace) -> int:
     positive_rows = _read_json_rows(Path(args.positive_results_json))
     negative_rows = _read_json_rows(Path(args.negative_results_json))
     required_roles = tuple(args.required_role) if args.required_role else _DEFAULT_REQUIRED_ROLES
+    required_operations = tuple(args.required_operation or [])
 
-    offenders = evaluate_trace_results(positive_rows, negative_rows, required_roles)
+    offenders = evaluate_trace_results(
+        positive_rows,
+        negative_rows,
+        required_roles,
+        required_operations,
+    )
     if offenders:
         for offender in offenders:
             print(offender)
@@ -180,6 +220,7 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--positive-results-json", required=True)
     evaluate.add_argument("--negative-results-json", required=True)
     evaluate.add_argument("--required-role", action="append", default=[])
+    evaluate.add_argument("--required-operation", action="append", default=[])
     evaluate.set_defaults(func=_evaluate_command)
 
     return parser

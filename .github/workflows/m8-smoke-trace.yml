@@ -52,6 +52,10 @@ on:
         required: false
       AZURE_SUBSCRIPTION_ID:
         required: false
+      M9_PLAYWRIGHT_CHAT_URL:
+        required: false
+      M9_PLAYWRIGHT_ACCESS_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -152,6 +156,11 @@ jobs:
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       LIVE_AZURE_TESTS: ${{ inputs.live_azure_tests }}
       KQL_LOOKBACK: ${{ inputs.kql_lookback }}
+      M9_PLAYWRIGHT_CHAT_URL: ${{ secrets.M9_PLAYWRIGHT_CHAT_URL }}
+      M9_PLAYWRIGHT_ACCESS_TOKEN: ${{ secrets.M9_PLAYWRIGHT_ACCESS_TOKEN }}
+      M9_PLAYWRIGHT_EXPECTED_STATUS: ${{ vars.M9_PLAYWRIGHT_EXPECTED_STATUS }}
+      M9_PLAYWRIGHT_TIMEOUT_SECONDS: ${{ vars.M9_PLAYWRIGHT_TIMEOUT_SECONDS }}
+      M9_PLAYWRIGHT_DISPLAY_NAME: ${{ vars.M9_PLAYWRIGHT_DISPLAY_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -170,7 +179,7 @@ jobs:
           test -n "${AZURE_SUBSCRIPTION_ID}"
           python tools/ci/m9_live_preflight.py \
             --context smoke-identity \
-            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID
+            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN
           if [[ "${LIVE_AZURE_TESTS}" != "true" ]]; then
             echo "Live smoke/trace execution requires LIVE_AZURE_TESTS=true."
             exit 1
@@ -209,7 +218,29 @@ jobs:
             app_fqdn="$(az containerapp show --name "${app}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.configuration.ingress.fqdn -o tsv)"
             python -c 'import sys, urllib.request; r = urllib.request.urlopen(f"https://{sys.argv[1]}/readyz", timeout=30); r.close(); raise SystemExit(0 if r.status == 200 else 1)' "${app_fqdn}"
           done
+
+      - name: Install Playwright runtime for live smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install chromium
+
+      - name: Run live browser smoke harness
+        shell: bash
+        run: |
+          set -euo pipefail
           python tools/ci/m8_browser_smoke_harness.py --mode live --output-json m8-browser-smoke-live.json
+
+      - name: Upload live smoke summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-browser-smoke-live
+          path: m8-browser-smoke-live.json
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Run Azure Monitor KQL verification
         shell: bash
@@ -236,7 +267,10 @@ jobs:
             --negative-results-json artifacts/negative.json \
             --required-role identity-lab-bff \
             --required-role identity-lab-agent-execution \
-            --required-role identity-lab-mcp-protected-api
+            --required-role identity-lab-mcp-protected-api \
+            --required-operation /chat/session \
+            --required-operation /agent/invoke \
+            --required-operation /tools/authorization-check
 
       - name: Restore internal app scale-to-zero
         if: ${{ always() }}

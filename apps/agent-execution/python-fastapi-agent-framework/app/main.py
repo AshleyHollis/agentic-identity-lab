@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Depends, FastAPI, Request
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from identity_lab_diagnostics import get_correlation_id
@@ -13,6 +14,7 @@ from .diagnostics import build_health_payload, build_ready_payload
 
 from identity_lab_auth import AUTH_FIXTURE_HEADER, AuthMode
 from identity_lab_auth.telemetry import (
+    get_tracer,
     setup_telemetry,
     instrument_fastapi,
     record_auth_attributes,
@@ -21,6 +23,7 @@ from identity_lab_auth.telemetry import (
 
 settings = load_settings()
 setup_telemetry(settings.service_name)
+tracer = get_tracer("identity_lab.agent_execution")
 app = FastAPI(title=settings.service_name, version="0.1.0")
 instrument_fastapi(app)
 
@@ -39,6 +42,9 @@ class AgentInvokeResponse(BaseModel):
     payload_keys: list[str]
     obo_audience: str | None
     obo_scopes: list[str]
+    chain_exercised: bool
+    mcp_authorized: bool | None = None
+    mcp_correlation_id: str | None = None
 
 
 @app.get("/healthz")
@@ -112,6 +118,7 @@ def _invoke_response(
     mode: str,
     request: AgentInvokeRequest,
     auth_context: AuthContext,
+    http_request: Request,
 ) -> AgentInvokeResponse:
     payload_keys = sorted(request.payload.keys()) if request.payload else []
     record_auth_attributes(
@@ -121,9 +128,18 @@ def _invoke_response(
     )
     obo_exchange = None
     if auth_context.authorized and auth_context.token_type == "delegated":
-        record_obo_attributes(obo_hop="user_obo")
+        record_obo_attributes(obo_hop="agent_obo")
         obo_exchange = exchange_for_mcp(auth_context, settings)
     obo_claims = obo_exchange.claims if obo_exchange else {}
+    mcp_authorized = None
+    mcp_correlation_id = None
+    chain_exercised = False
+    if settings.mcp_chain_enabled and obo_exchange:
+        mcp_result = _invoke_mcp_authorization_check(http_request, auth_context, obo_exchange.authorization)
+        mcp_authorized = bool(mcp_result.get("authorized"))
+        correlation_value = mcp_result.get("correlation_id")
+        mcp_correlation_id = str(correlation_value) if correlation_value else None
+        chain_exercised = True
     return AgentInvokeResponse(
         status="accepted",
         message=f"{mode} placeholder - auth enforced",
@@ -133,28 +149,74 @@ def _invoke_response(
         payload_keys=payload_keys,
         obo_audience=obo_claims.get("aud") if obo_claims else None,
         obo_scopes=_extract_scopes(obo_claims) if obo_claims else [],
+        chain_exercised=chain_exercised,
+        mcp_authorized=mcp_authorized,
+        mcp_correlation_id=mcp_correlation_id,
     )
+
+
+def _invoke_mcp_authorization_check(
+    request: Request,
+    auth_context: AuthContext,
+    obo_authorization: str,
+) -> dict[str, Any]:
+    url = f"{settings.mcp_protected_api_base_url}{settings.mcp_authorization_check_path}"
+    headers = {
+        "Authorization": obo_authorization,
+        settings.correlation_header: auth_context.correlation_id or "",
+    }
+    traceparent = request.headers.get("traceparent")
+    if traceparent:
+        headers["traceparent"] = traceparent
+    with tracer.start_as_current_span("identity_lab.agent_execution.call_mcp"):
+        try:
+            response = httpx.post(
+                url,
+                json={},
+                headers=headers,
+                timeout=settings.downstream_timeout_seconds,
+            )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="mcp_unreachable",
+            ) from exc
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="mcp_error",
+        )
+    data = response.json()
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="mcp_invalid_payload",
+        )
+    return data
 
 
 @app.post("/agent/invoke")
 def agent_invoke(
+    http_request: Request,
     request: AgentInvokeRequest,
     auth_context: AuthContext = Depends(get_auth_context),
 ) -> AgentInvokeResponse:
-    return _invoke_response("invoke", request, auth_context)
+    return _invoke_response("invoke", request, auth_context, http_request)
 
 
 @app.post("/agent/invoke-modern")
 def agent_invoke_modern(
+    http_request: Request,
     request: AgentInvokeRequest,
     auth_context: AuthContext = Depends(get_auth_context),
 ) -> AgentInvokeResponse:
-    return _invoke_response("invoke-modern", request, auth_context)
+    return _invoke_response("invoke-modern", request, auth_context, http_request)
 
 
 @app.post("/agent/invoke-low-change")
 def agent_invoke_low_change(
+    http_request: Request,
     request: AgentInvokeRequest,
     auth_context: AuthContext = Depends(get_auth_context),
 ) -> AgentInvokeResponse:
-    return _invoke_response("invoke-low-change", request, auth_context)
+    return _invoke_response("invoke-low-change", request, auth_context, http_request)

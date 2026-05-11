@@ -38,6 +38,10 @@ class Settings:
     trusted_tenants: list[str]
     enable_debug_claims: bool
     correlation_header: str
+    chat_session_chain_enabled: bool
+    agent_execution_base_url: str
+    agent_invoke_path: str
+    downstream_timeout_seconds: float
     # Comma-separated origins; empty list disables CORS middleware entirely.
     # Defaults to ["http://localhost:3000"] in AUTH_MODE=mock only.
     cors_allowed_origins: list[str]
@@ -75,8 +79,19 @@ def load_settings() -> Settings:
         ),
         enable_debug_claims=_parse_bool(os.getenv("ENABLE_DEBUG_CLAIMS"), False),
         correlation_header=os.getenv("CORRELATION_HEADER", "x-correlation-id"),
+        chat_session_chain_enabled=_parse_bool(
+            os.getenv("CHAT_SESSION_CHAIN_ENABLED"),
+            default=False,
+        ),
+        agent_execution_base_url=os.getenv("AGENT_EXECUTION_BASE_URL", "").rstrip("/"),
+        agent_invoke_path=os.getenv("AGENT_EXECUTION_INVOKE_PATH", "/agent/invoke"),
+        downstream_timeout_seconds=float(os.getenv("DOWNSTREAM_TIMEOUT_SECONDS", "10")),
         cors_allowed_origins=cors_allowed_origins,
     )
+    if settings.chat_session_chain_enabled and not settings.agent_execution_base_url:
+        raise ValueError(
+            "CHAT_SESSION_CHAIN_ENABLED requires AGENT_EXECUTION_BASE_URL to be configured."
+        )
     if settings.auth_mode == AuthMode.STRICT:
         validate_strict_config(
             issuer=settings.auth_issuer,

@@ -13,7 +13,9 @@ BFF service that enforces the local/mock delegated-token boundary and returns sa
 
 ### POST `/chat/session`
 
-Returns a server-generated session identifier for browser chat clients. Response schema:
+Returns a server-generated session identifier for browser chat clients. In strict mode, this endpoint also invokes Agent Execution (`/agent/invoke`) to exercise the delegated BFF -> Agent -> MCP chain.
+
+Response schema:
 
 ```json
 {
@@ -23,6 +25,13 @@ Returns a server-generated session identifier for browser chat clients. Response
 ```
 
 No raw bearer token or PII is included in the response.
+
+### Downstream chain settings
+
+- `CHAT_SESSION_CHAIN_ENABLED` (default: `false`)
+- `AGENT_EXECUTION_BASE_URL` (required when chain is enabled)
+- `AGENT_EXECUTION_INVOKE_PATH` (default: `/agent/invoke`)
+- `DOWNSTREAM_TIMEOUT_SECONDS` (default: `10`)
 
 ## `userId` Display-Only Rule
 

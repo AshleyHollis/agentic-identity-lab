@@ -88,6 +88,10 @@ module "container_app_bff" {
     TRUSTED_TENANTS                       = var.trusted_tenants
     ALLOWED_AUDIENCES                     = var.bff_allowed_audiences
     REQUIRED_SCOPES                       = "mcp.access"
+    CHAT_SESSION_CHAIN_ENABLED            = "true"
+    AGENT_EXECUTION_BASE_URL              = "https://${module.container_app_agent_execution.fqdn}"
+    AGENT_EXECUTION_INVOKE_PATH           = "/agent/invoke"
+    DOWNSTREAM_TIMEOUT_SECONDS            = "10"
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
   }
   tags = var.tags
@@ -113,6 +117,10 @@ module "container_app_agent_execution" {
     BLUEPRINT_AUDIENCE                    = var.blueprint_audience
     OBO_DOWNSTREAM_AUDIENCE               = var.mcp_allowed_audiences
     OBO_REQUIRED_SCOPES                   = "mcp.access,mcp.write"
+    MCP_CHAIN_ENABLED                     = "true"
+    MCP_PROTECTED_API_BASE_URL            = "https://${module.container_app_mcp_protected_api.fqdn}"
+    MCP_AUTHORIZATION_CHECK_PATH          = "/tools/authorization-check"
+    DOWNSTREAM_TIMEOUT_SECONDS            = "10"
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
   }
   tags = var.tags

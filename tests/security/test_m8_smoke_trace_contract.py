@@ -11,11 +11,45 @@ from tools.ci.m8_smoke_trace_contract import (  # noqa: E402
     evaluate_trace_results,
     validate_smoke_trace_scaffold,
 )
+from tools.ci.m8_browser_smoke_harness import validate_live_inputs  # noqa: E402
 
 
 def test_m8_browser_smoke_harness_wiring_is_clean() -> None:
     offenders = validate_browser_smoke_wiring(ROOT)
     assert offenders == [], "M8 browser smoke harness wiring offenders found:\n" + "\n".join(offenders)
+
+
+def test_m8_browser_smoke_harness_live_input_contract_requires_protected_inputs() -> None:
+    offenders = validate_live_inputs(env={})
+    assert any("M9_PLAYWRIGHT_CHAT_URL" in offender for offender in offenders)
+    assert any("M9_PLAYWRIGHT_ACCESS_TOKEN" in offender for offender in offenders)
+
+
+def test_m8_browser_smoke_harness_live_input_contract_accepts_protected_values() -> None:
+    offenders = validate_live_inputs(
+        env={
+            "M9_PLAYWRIGHT_CHAT_URL": "https://contoso.example.com/chat/session",
+            "M9_PLAYWRIGHT_ACCESS_TOKEN": "redacted-protected-token",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+            "M9_PLAYWRIGHT_TIMEOUT_SECONDS": "30",
+        }
+    )
+    assert offenders == []
+
+
+def test_m8_browser_smoke_harness_live_input_contract_rejects_placeholder_values() -> None:
+    offenders = validate_live_inputs(
+        env={
+            "M9_PLAYWRIGHT_CHAT_URL": "https://{placeholder}/chat/session",
+            "M9_PLAYWRIGHT_ACCESS_TOKEN": "<token-placeholder>",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "ok",
+            "M9_PLAYWRIGHT_TIMEOUT_SECONDS": "0",
+        }
+    )
+    assert any("M9_PLAYWRIGHT_CHAT_URL" in offender for offender in offenders)
+    assert any("M9_PLAYWRIGHT_ACCESS_TOKEN" in offender for offender in offenders)
+    assert any("M9_PLAYWRIGHT_EXPECTED_STATUS" in offender for offender in offenders)
+    assert any("M9_PLAYWRIGHT_TIMEOUT_SECONDS" in offender for offender in offenders)
 
 
 def test_m8_trace_contract_static_scaffold_is_clean() -> None:
@@ -53,3 +87,21 @@ def test_m8_trace_contract_evaluation_passes_with_full_chain_and_no_leakage() ->
         negative_rows=[],
     )
     assert offenders == []
+
+
+def test_m8_trace_contract_evaluation_flags_missing_required_operations() -> None:
+    offenders = evaluate_trace_results(
+        positive_rows=[
+            {"cloud_RoleName": "apim", "name": "GET /readyz"},
+            {"cloud_RoleName": "bff", "name": "POST /chat/session"},
+            {"cloud_RoleName": "agent-execution", "name": "POST /agent/invoke"},
+            {"cloud_RoleName": "mcp-protected-api", "name": "GET /whoami"},
+        ],
+        negative_rows=[],
+        required_operations=(
+            "/chat/session",
+            "/agent/invoke",
+            "/tools/authorization-check",
+        ),
+    )
+    assert any("missing required operations" in offender for offender in offenders)

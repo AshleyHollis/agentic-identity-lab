@@ -42,6 +42,10 @@ class Settings:
     enable_debug_claims: bool
     correlation_header: str
     blueprint_audience: str
+    mcp_chain_enabled: bool
+    mcp_protected_api_base_url: str
+    mcp_authorization_check_path: str
+    downstream_timeout_seconds: float
 
 
 def load_settings() -> Settings:
@@ -76,7 +80,21 @@ def load_settings() -> Settings:
         enable_debug_claims=_parse_bool(os.getenv("ENABLE_DEBUG_CLAIMS"), False),
         correlation_header=os.getenv("CORRELATION_HEADER", "x-correlation-id"),
         blueprint_audience=os.getenv("BLUEPRINT_AUDIENCE", BLUEPRINT_AUDIENCE_PLACEHOLDER),
+        mcp_chain_enabled=_parse_bool(
+            os.getenv("MCP_CHAIN_ENABLED"),
+            default=False,
+        ),
+        mcp_protected_api_base_url=os.getenv("MCP_PROTECTED_API_BASE_URL", "").rstrip("/"),
+        mcp_authorization_check_path=os.getenv(
+            "MCP_AUTHORIZATION_CHECK_PATH",
+            "/tools/authorization-check",
+        ),
+        downstream_timeout_seconds=float(os.getenv("DOWNSTREAM_TIMEOUT_SECONDS", "10")),
     )
+    if settings.mcp_chain_enabled and not settings.mcp_protected_api_base_url:
+        raise ValueError(
+            "MCP_CHAIN_ENABLED requires MCP_PROTECTED_API_BASE_URL to be configured."
+        )
     if settings.auth_mode == AuthMode.STRICT:
         validate_strict_config(
             issuer=settings.auth_issuer,
