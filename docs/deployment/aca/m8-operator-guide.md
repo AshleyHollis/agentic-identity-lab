@@ -81,6 +81,32 @@ python tools/ci/m8_smoke_trace_contract.py validate --workflow-file .github/work
   - `browser_transport=playwright` (default), `agent-browser` (accepted-risk), or `manual-artifact` (human MFA + redacted artifact)
 - Keep artifacts sanitized; do not upload token-bearing HAR/trace/log files.
 
+#### Smoke-ready manual-artifact dispatch (no durable Playwright token)
+
+```powershell
+gh workflow run m8-smoke-trace.yml --ref main `
+  -f environment_slug=agentidlab-live `
+  -f live_azure_tests=true `
+  -f run_live_azure_checks=true `
+  -f browser_transport=manual-artifact `
+  -f browser_evidence_json=docs/testing/m9-browser-manual-evidence-template.json `
+  -f kql_lookback=30m
+```
+
+- The manual artifact file must stay boolean/status-only and redacted.
+- If `m8-deploy-live.yml` is not green yet, run this only after deploy is successful and approved.
+
+#### Accepted-risk agent-browser secret setup (if needed)
+
+No repo helper currently writes `M9_AGENT_BROWSER_COMMAND`. Set it directly in the protected smoke environment without printing the command body:
+
+```powershell
+Get-Content .\protected\m9-agent-browser-command.txt | gh secret set M9_AGENT_BROWSER_COMMAND --repo AshleyHollis/agentic-identity-lab --env lab-live-azure-smoke
+```
+
+- Keep the command file local-only and out of git.
+- Command stdout must be JSON with redacted fields only: `ok`, `status`, `sessionIdPresent`, `expiresAtPresent`, optional digests/safe source label.
+
 ### Telemetry privacy rules
 
 - Never print or persist `Authorization`, `Cookie`, `Set-Cookie`, raw JWTs, or token-like strings.
