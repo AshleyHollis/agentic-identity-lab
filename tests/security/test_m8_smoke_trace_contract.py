@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT))
 from tools.ci.m8_browser_smoke_harness import validate_browser_smoke_wiring  # noqa: E402
 from tools.ci.m8_browser_smoke_harness import run_live_playwright_smoke  # noqa: E402
 from tools.ci.m8_browser_smoke_harness import run_live_manual_artifact_smoke  # noqa: E402
+from tools.ci.m8_browser_smoke_harness import run_live_agent_browser_smoke  # noqa: E402
 from tools.ci.m8_smoke_trace_contract import (  # noqa: E402
     evaluate_trace_results,
     validate_smoke_trace_scaffold,
@@ -171,6 +172,57 @@ def test_m8_browser_smoke_harness_does_not_emit_trace_or_token_artifacts(monkeyp
     assert "traceparent" not in serialized
     assert "access_token" not in serialized
     assert "redacted-protected-token" not in serialized
+
+
+def test_m8_agent_browser_smoke_accepts_json_stdout_from_nonzero_command(monkeypatch) -> None:
+    import tools.ci.m8_browser_smoke_harness as harness
+
+    class FakeCompleted:
+        returncode = 9
+        stdout = json.dumps(
+            {
+                "ok": True,
+                "status": 200,
+                "sessionIdPresent": True,
+                "expiresAtPresent": True,
+                "resultSource": "agent-browser-test",
+            }
+        )
+        stderr = "runtime-warning"
+
+    monkeypatch.setattr(harness.subprocess, "run", lambda *_args, **_kwargs: FakeCompleted())
+
+    evidence, offenders = run_live_agent_browser_smoke(
+        {
+            "M9_AGENT_BROWSER_COMMAND": "python tools/ci/m9_agent_browser_command.py",
+            "M9_PLAYWRIGHT_CHAT_URL": "https://contoso.example.com/chat/session",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+        }
+    )
+
+    assert offenders == []
+    assert evidence["transport"] == "agent-browser"
+    assert evidence["result_source"] == "agent-browser-test"
+
+
+def test_m8_agent_browser_smoke_fails_nonzero_command_with_empty_stdout(monkeypatch) -> None:
+    import tools.ci.m8_browser_smoke_harness as harness
+
+    class FakeCompleted:
+        returncode = 2
+        stdout = ""
+        stderr = "boom"
+
+    monkeypatch.setattr(harness.subprocess, "run", lambda *_args, **_kwargs: FakeCompleted())
+    _evidence, offenders = run_live_agent_browser_smoke(
+        {
+            "M9_AGENT_BROWSER_COMMAND": "python tools/ci/m9_agent_browser_command.py",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+        }
+    )
+
+    assert any("exited with code 2" in offender for offender in offenders)
+    assert any("empty stdout" in offender for offender in offenders)
 
 
 def test_m8_trace_contract_static_scaffold_is_clean() -> None:

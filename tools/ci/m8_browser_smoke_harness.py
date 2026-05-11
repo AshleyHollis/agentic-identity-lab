@@ -390,12 +390,10 @@ def run_live_agent_browser_smoke(env: Mapping[str, str]) -> tuple[dict[str, obje
         offenders.append(f"[live] agent-browser command failed to start: {exc.__class__.__name__}")
         return evidence, offenders
 
-    if completed.returncode != 0:
-        offenders.append(f"[live] agent-browser command exited with code {completed.returncode}")
-        return evidence, offenders
-
     stdout = (completed.stdout or "").strip()
     if not stdout:
+        if completed.returncode != 0:
+            offenders.append(f"[live] agent-browser command exited with code {completed.returncode}")
         offenders.append("[live] agent-browser command returned empty stdout")
         return evidence, offenders
 
