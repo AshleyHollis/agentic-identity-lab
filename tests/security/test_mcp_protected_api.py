@@ -103,3 +103,20 @@ def test_mcp_app_only_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     assert response.status_code == 403
+
+
+def test_mcp_whoami_uses_configured_correlation_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    expected_correlation = "corr-mcp-custom-header"
+    custom_header = "x-trace-correlation-id"
+    monkeypatch.setenv("CORRELATION_HEADER", custom_header)
+    client = _build_client(monkeypatch)
+    response = client.get(
+        "/whoami",
+        headers={
+            FIXTURE_HEADER: "mcp-delegated",
+            custom_header: expected_correlation,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["correlation_id"] == expected_correlation

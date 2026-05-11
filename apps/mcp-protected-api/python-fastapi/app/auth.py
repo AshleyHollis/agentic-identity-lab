@@ -62,7 +62,9 @@ def _build_auth_context(request: Request) -> AuthContext:
             ) from exc
     else:
         claims = load_auth_claims(auth_settings)
-    correlation_id = get_correlation_id(request.headers)
+    correlation_id = get_correlation_id(
+        request.headers, header_name=settings.correlation_header
+    )
     if claims is None:
         return AuthContext.from_claims(
             {},
