@@ -11,12 +11,12 @@
 | T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
 | T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `25642915504` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
 | T08 | Runtime configuration verification | Tank / Neo | T07 | ✅ Complete (ACA/APIM runtime posture verified; strict auth/App Insights/runtime ports confirmed; run `25644428588` also verified live runtime telemetry) |
-| T09 | Browser smoke execution | Mouse / Neo | T08 | ✅ Complete (protected live smoke run `25644428588`) |
-| T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete (protected Azure Monitor KQL verification in run `25644428588` observed BFF, Agent Execution, and MCP roles) |
-| T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete (protected run `25644428588` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
+| T09 | Browser smoke execution | Mouse / Neo | T08 | Blocked for real delegated-browser smoke (missing protected `LIVE_*` smoke runtime vars/test identity); protected live readiness smoke run `25644428588` passed for BFF + Agent Execution + MCP |
+| T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete for readiness-generated live traces (protected Azure Monitor KQL verification in run `25644428588` observed BFF, Agent Execution, and MCP roles) |
+| T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete for readiness-generated live telemetry (protected run `25644428588` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
 | T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress |
-| T13 | Cost-control shutdown verification | Tank | T09 | Pending |
-| T14 | Deployment readiness review | Tank | T01-T08, T13 | Pending |
+| T13 | Cost-control shutdown verification | Tank | T09 | ✅ Complete (protected shutdown run `25644655120`; all ACA apps min replicas restored to 0) |
+| T14 | Deployment readiness review | Tank | T01-T08, T13 | In progress / blocked on real delegated-browser smoke prerequisites |
 | T15 | Security/evidence review | Trinity | T03, T11, T12 | Pending |
 | T16 | Architecture closeout review | Morpheus | T12-T15 | Pending |
 | T17 | Final M9 closeout | Morpheus | T16 | Pending |

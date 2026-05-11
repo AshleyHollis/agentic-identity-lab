@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t12-redacted-evidence-package",
-  "status": "t08-through-t11-live-runtime-smoke-trace-verification-complete-t12-in-progress",
+  "phase": "implement-t14-deployment-readiness-review",
+  "status": "readiness-smoke-trace-and-shutdown-complete-real-delegated-browser-smoke-blocked",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -23,8 +23,8 @@
   },
   "impact": "High",
   "spec_gate_satisfied": true,
-  "implementation_blocked": false,
-  "implementation_blocked_reason": "",
+  "implementation_blocked": true,
+  "implementation_blocked_reason": "Real delegated-browser smoke requires protected LIVE_* smoke runtime variables and a suitable delegated test identity; readiness-based live smoke/trace is complete.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -49,7 +49,8 @@
     ".squad\\decisions\\inbox\\tank-m9-runtime-vars-t04-readiness.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal-success.md": "complete",
-    ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md": "in-progress"
+    ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md": "complete",
+    ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md": "complete"
   },
   "adrs": {
     "ADR-M9-01": "Reuse M8 protected workflow family",
@@ -67,18 +68,18 @@
     "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
     "T07": "complete-protected-live-deploy-run-25642915504-succeeded",
     "T08": "complete-runtime-config-and-telemetry-verified",
-    "T09": "complete-protected-live-smoke-run-25644428588-succeeded",
-    "T10": "complete-positive-kql-chain-run-25644428588-succeeded",
-    "T11": "complete-negative-leakage-query-run-25644428588-succeeded",
+    "T09": "blocked-real-delegated-browser-smoke-missing-live-runtime-vars-test-identity-readiness-smoke-complete-run-25644428588",
+    "T10": "complete-positive-kql-readiness-chain-run-25644428588-succeeded",
+    "T11": "complete-negative-leakage-readiness-query-run-25644428588-succeeded",
     "T12": "in-progress",
-    "T13": "pending",
-    "T14": "pending",
+    "T13": "complete-protected-shutdown-run-25644655120-succeeded",
+    "T14": "in-progress-blocked-on-real-delegated-browser-smoke-prerequisites",
     "T15": "pending",
     "T16": "pending",
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "t08-through-t11-live-runtime-smoke-trace-verification-complete-evidence-in-progress",
+    "status": "readiness-smoke-trace-and-cost-shutdown-complete-real-delegated-browser-smoke-blocked",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
@@ -124,11 +125,15 @@
     "t07_live_deploy_scope": "image-publish-terraform-apply-aca-image-rollout",
     "t07_aca_rollout_status": "all-container-apps-succeeded-running-target-port-8000",
     "t08_runtime_verification_status": "complete-strict-auth-appinsights-private-acr-target-port-8000-and-aca-running-state-verified",
-    "t09_live_smoke_run": "25644428588-success",
-    "t10_positive_kql_chain": "25644428588-success-bff-agent-execution-mcp-roles-observed",
-    "t11_negative_leakage": "25644428588-success-zero-forbidden-token-or-pii-hits",
+    "t09_live_smoke_run": "blocked-for-real-delegated-browser-smoke-readiness-smoke-run-25644428588-success",
+    "t09_blockers": "missing LIVE_AGENT_EXECUTION_AUDIENCE, LIVE_APIM_BASE_URL, LIVE_AUTHORITY_HOST, LIVE_BFF_AUDIENCE, LIVE_MCP_AUDIENCE, LIVE_READINESS_URL, LIVE_SMOKE_CLIENT_ID, LIVE_SMOKE_SCOPES plus suitable delegated test identity",
+    "t10_positive_kql_chain": "25644428588-success-bff-agent-execution-mcp-roles-observed-from-readiness-generated-traces",
+    "t11_negative_leakage": "25644428588-success-zero-forbidden-token-or-pii-hits-for-readiness-generated-telemetry",
     "t09_t11_cleanup_status": "agent-execution-and-mcp-restored-to-internal-ingress-and-min-replicas-0",
-    "t12_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md"
+    "t12_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md",
+    "t13_shutdown_run": "25644655120-success",
+    "t13_shutdown_status": "all-aca-apps-min-replicas-0-agent-and-mcp-internal-ingress",
+    "t13_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [
