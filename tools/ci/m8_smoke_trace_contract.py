@@ -105,7 +105,7 @@ def evaluate_trace_results(
     offenders: list[str] = []
 
     observed_roles = {
-        str(row.get("cloud_RoleName") or row.get("roleName") or "").lower()
+        str(row.get("cloud_RoleName") or row.get("AppRoleName") or row.get("roleName") or "").lower()
         for row in positive_rows
     }
     missing_roles = [role for role in required_roles if role not in observed_roles]
@@ -154,8 +154,9 @@ def _validate_command(args: argparse.Namespace) -> int:
 def _evaluate_command(args: argparse.Namespace) -> int:
     positive_rows = _read_json_rows(Path(args.positive_results_json))
     negative_rows = _read_json_rows(Path(args.negative_results_json))
+    required_roles = tuple(args.required_role) if args.required_role else _DEFAULT_REQUIRED_ROLES
 
-    offenders = evaluate_trace_results(positive_rows, negative_rows)
+    offenders = evaluate_trace_results(positive_rows, negative_rows, required_roles)
     if offenders:
         for offender in offenders:
             print(offender)
@@ -178,6 +179,7 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate = subparsers.add_parser("evaluate", help="Evaluate live query result files")
     evaluate.add_argument("--positive-results-json", required=True)
     evaluate.add_argument("--negative-results-json", required=True)
+    evaluate.add_argument("--required-role", action="append", default=[])
     evaluate.set_defaults(func=_evaluate_command)
 
     return parser

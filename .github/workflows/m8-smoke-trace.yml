@@ -149,6 +149,7 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_SMOKE }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       LIVE_AZURE_TESTS: ${{ inputs.live_azure_tests }}
       KQL_LOOKBACK: ${{ inputs.kql_lookback }}
     steps:
@@ -182,22 +183,44 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Canonical browser smoke command placeholder
+      - name: Generate live readiness telemetry
         shell: bash
         run: |
           set -euo pipefail
-          python tools/ci/m8_browser_smoke_harness.py \
-            --mode live \
-            --output-json m8-browser-smoke-live.json
+          test -n "${AZURE_RESOURCE_GROUP}"
+          bff_fqdn="$(az containerapp show --name agent-identity-lab-dev-bff --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.configuration.ingress.fqdn -o tsv)"
+          python -c 'import sys, urllib.request; fqdn = sys.argv[1]; [urllib.request.urlopen(f"https://{fqdn}/readyz", timeout=30).close() for _ in range(3)]' "$bff_fqdn"
+          for app in agent-identity-lab-dev-agent agent-identity-lab-dev-mcp; do
+            az containerapp update \
+              --name "${app}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --min-replicas 1 \
+              --only-show-errors >/dev/null
+          done
+          sleep 45
+          for app in agent-identity-lab-dev-agent agent-identity-lab-dev-mcp; do
+            az containerapp exec \
+              --name "${app}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --command "python -c __import__('urllib.request').request.urlopen('http://127.0.0.1:8000/readyz').close()"
+          done
+          python tools/ci/m8_browser_smoke_harness.py --mode live --output-json m8-browser-smoke-live.json
 
-      - name: Run Azure Monitor KQL placeholders
+      - name: Run Azure Monitor KQL verification
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          echo "Replace with protected az monitor query execution using KQL files."
-          echo "[]" > artifacts/positive.json
-          echo "[]" > artifacts/negative.json
+          workspace_id="$(az monitor log-analytics workspace show --resource-group "${AZURE_RESOURCE_GROUP}" --workspace-name agent-identity-lab-dev-logs --query customerId -o tsv)"
+          sleep 60
+          az monitor log-analytics query \
+            --workspace "${workspace_id}" \
+            --analytics-query "$(cat tools/telemetry/kql/m8-positive-chain.kql)" \
+            -o json > artifacts/positive.json
+          az monitor log-analytics query \
+            --workspace "${workspace_id}" \
+            --analytics-query "$(cat tools/telemetry/kql/m8-negative-leakage.kql)" \
+            -o json > artifacts/negative.json
 
       - name: Enforce trace contract hard-fail behavior
         shell: bash
@@ -205,4 +228,20 @@ jobs:
           set -euo pipefail
           python tools/ci/m8_smoke_trace_contract.py evaluate \
             --positive-results-json artifacts/positive.json \
-            --negative-results-json artifacts/negative.json
+            --negative-results-json artifacts/negative.json \
+            --required-role identity-lab-bff \
+            --required-role identity-lab-agent-execution \
+            --required-role identity-lab-mcp-protected-api
+
+      - name: Restore internal app scale-to-zero
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set +e
+          for app in agent-identity-lab-dev-agent agent-identity-lab-dev-mcp; do
+            az containerapp update \
+              --name "${app}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --min-replicas 0 \
+              --only-show-errors >/dev/null
+          done

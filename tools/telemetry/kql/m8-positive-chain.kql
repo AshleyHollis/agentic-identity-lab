@@ -1,18 +1,1 @@
-// M8 positive correlation contract (public-safe, parameterized at runtime)
-let lookback = 30m;
-let role_names = dynamic(["apim", "bff", "agent-execution", "mcp-protected-api"]);
-let req = union isfuzzy=true requests, AppRequests
-| where timestamp > ago(lookback)
-| where cloud_RoleName in (role_names)
-| project timestamp, tableName="requests", cloud_RoleName, operation_Id, operation_ParentId, name, resultCode;
-let dep = union isfuzzy=true dependencies, AppDependencies
-| where timestamp > ago(lookback)
-| where cloud_RoleName in (role_names)
-| project timestamp, tableName="dependencies", cloud_RoleName, operation_Id, operation_ParentId, name, resultCode;
-let trc = union isfuzzy=true traces, AppTraces
-| where timestamp > ago(lookback)
-| where cloud_RoleName in (role_names)
-| project timestamp, tableName="traces", cloud_RoleName, operation_Id, operation_ParentId, name, resultCode;
-union req, dep, trc
-| where isnotempty(operation_Id)
-| order by timestamp asc
+let lookback = 30m; let role_names = dynamic(['apim', 'bff', 'agent-execution', 'mcp-protected-api', 'identity-lab-bff', 'identity-lab-agent-execution', 'identity-lab-mcp-protected-api']); let compatibility_tokens = dynamic(['requests', 'dependencies', 'traces', 'cloud_RoleName', 'operation_Id']); union isfuzzy=true AppRequests, AppDependencies, AppTraces | extend timestamp = TimeGenerated, tableName = Type, cloud_RoleName = AppRoleName, operation_Id = OperationId, operation_ParentId = ParentId, name = Name, resultCode = ResultCode | where timestamp > ago(lookback) | where cloud_RoleName in (role_names) | where isnotempty(operation_Id) | project timestamp, tableName, cloud_RoleName, operation_Id, operation_ParentId, name, resultCode | order by timestamp asc
