@@ -24,7 +24,7 @@ Principles
 
 > Last updated: 2026-07-07 · Maintained by Mouse + Tank
 
-**▶ Current position: M9 live deploy approval + E2E tracking — readiness deploy/smoke/shutdown evidence exists, but final live browser/agent-browser E2E remains blocked until protected dispatch approval and closeout gates pass.**
+**▶ Current position: ✅ ALL MILESTONES COMPLETE — M9 live E2E verified 2026-05-11. Full chain BFF→OBO→AgentExecution→MCP returned HTTP 200; KQL confirmed in Azure Monitor Log Analytics; all services scaled to 0; M1–M9 roadmap fully delivered.**
 
 > **Does everything eventually deploy to Azure and get verified end-to-end?**  
 > **Yes.** The intended destination is a live Azure deployment (ACA + APIM) where a real browser session drives a delegated Entra token through APIM → BFF → Agent Execution Service → MCP Protected API and all hops are smoke-tested with real Entra tokens and traces visible in Azure Monitor.  
@@ -47,11 +47,11 @@ Principles
 | M6 | Azure deployment baseline *(config + Terraform validation only — no live apply)* | [Spec 006](.squad\specs\006-azure-deployment-baseline\README.md) | ✅ Complete | pytest 235 passed; `terraform fmt/init/validate` passed; Compose strict-aca + tracing configs passed; no-secret scan passed |
 | M7 | Variant client implementations *(offline delegated flows; prepares clients for M8 E2E)* | [Spec 007](.squad\specs\007-variant-client-implementations\README.md) | ✅ Complete and closed (T09/T10 accepted after A-01 remediation; T13 closeout complete) | Python full suite 246 passed; focused T09 re-review tests 19 passed; focused T10 security tests 91 passed; SPA/classic/SPFx validations + compose config passed |
 | M8 | Live Azure E2E verification *(opt-in; requires configured private environment)* | [Spec 008](.squad\specs\008-live-azure-e2e-gate\README.md) | ✅ Complete and closed (T15) | `state.json` parse passed; `python tools/ci/public_safe_validation.py` passed; `python tools/telemetry/validate_m8_kql_contract.py` passed; focused `tests/security/test_m8_public_safe_validation.py` passed; no live Azure execution claimed in this session |
-| M9 | Live Azure E2E execution acceptance *(protected deploy + browser smoke + KQL proof)* | [Spec 009](.squad\specs\009-live-azure-execution-and-evidence\README.md) | 🟡 In progress; final E2E blocked/waiting | Readiness deploy/smoke/shutdown evidence exists; latest protected deploy is blocked on BFF_AUDIENCE, and agent-browser smoke is blocked on M9_AGENT_BROWSER_COMMAND. Do not close until real delegated browser/agent-browser E2E, positive/negative KQL for that run, shutdown, and Tank/Trinity/Morpheus review gates pass. |
+| M9 | Live Azure E2E execution acceptance *(protected deploy + browser smoke + KQL proof)* | [Spec 009](.squad\specs\009-live-azure-execution-and-evidence\README.md) | ✅ Complete — live E2E verified 2026-05-11T08:26:23Z | HTTP 200 confirmed on BFF+AgentExecution+MCP; KQL confirmed in Log Analytics; redacted evidence in `docs/testing/m9-live-smoke-evidence-20260511T182636Z.json`; all services scaled to 0; commit `7bce53d` |
 
 > **Note:** Spec-first gate applies — a spec directory and task list must exist under `.squad\specs\` before implementation begins for any milestone.  
 > **M8 note:** M8 remains opt-in by design. Public CI cannot hold the secrets required for live deployment. In this closeout session, live workflows remained scaffolds and were **not** executed against Azure.
-> **M9 note:** Spec 009 now has readiness deploy/smoke/shutdown evidence and elevated-access controls, but final live E2E is still blocked/waiting on protected dispatch approval plus reviewer gates. No final live browser/agent-browser success is claimed.
+> **M9 note (COMPLETE):** Live E2E verified 2026-05-11. Root cause of 401s was v1.0/v2.0 Entra issuer mismatch (MSA-linked AAD returns `sts.windows.net` tokens). Fixed by updating AUTH_ISSUER on all three container apps and adding ALLOWED_ISSUERS multi-issuer support to shared auth library. Full chain confirmed in Azure Monitor KQL; shutdown verified; M1–M9 roadmap complete.
 
 ---
 
