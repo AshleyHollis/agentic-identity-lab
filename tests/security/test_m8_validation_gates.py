@@ -79,6 +79,26 @@ def test_deploy_smoke_stage_runs_local_contract_validation() -> None:
     )
 
 
+def test_deploy_workflow_bootstrap_handoff_exports_and_validates_runtime_vars() -> None:
+    deploy = _read(ROOT / ".github" / "workflows" / "m8-deploy-live.yml")
+    assert 'source "artifacts/m9-entra-bootstrap.env"' in deploy
+    assert "--context deploy-bootstrap-handoff" in deploy
+    for required_name in (
+        "BFF_AUDIENCE",
+        "AGENT_EXECUTION_AUDIENCE",
+        "MCP_AUDIENCE",
+        "BLUEPRINT_AUDIENCE",
+        "BFF_SCOPE_MCP_ACCESS",
+        "AGENT_SCOPE_MCP_ACCESS",
+        "AGENT_SCOPE_MCP_WRITE",
+        "MCP_SCOPE_MCP_ACCESS",
+        "MCP_SCOPE_MCP_WRITE",
+        "BFF_OBO_CLIENT_ID",
+        "AGENT_OBO_CLIENT_ID",
+    ):
+        assert required_name in deploy
+
+
 def test_smoke_workflow_requires_playwright_protected_inputs() -> None:
     smoke = _read(ROOT / ".github" / "workflows" / "m8-smoke-trace.yml")
     assert "M9_PLAYWRIGHT_CHAT_URL" in smoke

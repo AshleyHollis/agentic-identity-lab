@@ -336,7 +336,7 @@ jobs:
           mkdir -p artifacts
           workdir="infra/terraform/environments/single-tenant-aca"
           cleanup_sensitive_files() {
-            rm -f "${workdir}/live.auto.tfvars" artifacts/terraform-apply.log artifacts/terraform-apply.err
+            rm -f "${workdir}/live.auto.tfvars" artifacts/terraform-apply.log artifacts/terraform-apply.err artifacts/m9-entra-bootstrap.env
           }
           trap cleanup_sensitive_files EXIT
           python tools/ci/m9_entra_app_bootstrap.py \
@@ -347,20 +347,33 @@ jobs:
           import os
           from pathlib import Path
 
+          env_mapping = {
+              "BFF_AUDIENCE": "bff_audience",
+              "AGENT_EXECUTION_AUDIENCE": "agent_execution_audience",
+              "MCP_AUDIENCE": "mcp_audience",
+              "BLUEPRINT_AUDIENCE": "blueprint_audience",
+              "BFF_SCOPE_MCP_ACCESS": "bff_scope_mcp_access",
+              "AGENT_SCOPE_MCP_ACCESS": "agent_execution_scope_mcp_access",
+              "AGENT_SCOPE_MCP_WRITE": "agent_execution_scope_mcp_write",
+              "MCP_SCOPE_MCP_ACCESS": "mcp_scope_mcp_access",
+              "MCP_SCOPE_MCP_WRITE": "mcp_scope_mcp_write",
+              "BFF_OBO_CLIENT_ID": "bff_client_id",
+              "AGENT_OBO_CLIENT_ID": "agent_execution_client_id",
+          }
           data = json.loads(Path("artifacts/m9-entra-bootstrap.json").read_text(encoding="utf-8"))
           with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as env_file:
-              env_file.write(f"BFF_AUDIENCE={data['bff_audience']}\n")
-              env_file.write(f"AGENT_EXECUTION_AUDIENCE={data['agent_execution_audience']}\n")
-              env_file.write(f"MCP_AUDIENCE={data['mcp_audience']}\n")
-              env_file.write(f"BLUEPRINT_AUDIENCE={data['blueprint_audience']}\n")
-              env_file.write(f"BFF_SCOPE_MCP_ACCESS={data['bff_scope_mcp_access']}\n")
-              env_file.write(f"AGENT_SCOPE_MCP_ACCESS={data['agent_execution_scope_mcp_access']}\n")
-              env_file.write(f"AGENT_SCOPE_MCP_WRITE={data['agent_execution_scope_mcp_write']}\n")
-              env_file.write(f"MCP_SCOPE_MCP_ACCESS={data['mcp_scope_mcp_access']}\n")
-              env_file.write(f"MCP_SCOPE_MCP_WRITE={data['mcp_scope_mcp_write']}\n")
-              env_file.write(f"BFF_OBO_CLIENT_ID={data['bff_client_id']}\n")
-              env_file.write(f"AGENT_OBO_CLIENT_ID={data['agent_execution_client_id']}\n")
+              for env_name, data_key in env_mapping.items():
+                  env_file.write(f"{env_name}={data[data_key]}\n")
+          with Path("artifacts/m9-entra-bootstrap.env").open("w", encoding="utf-8") as bootstrap_env:
+              for env_name, data_key in env_mapping.items():
+                  bootstrap_env.write(f"{env_name}={data[data_key]}\n")
           PY
+          set -a
+          source "artifacts/m9-entra-bootstrap.env"
+          set +a
+          python tools/ci/m9_live_preflight.py \
+            --context deploy-bootstrap-handoff \
+            --require BFF_AUDIENCE AGENT_EXECUTION_AUDIENCE MCP_AUDIENCE BLUEPRINT_AUDIENCE BFF_SCOPE_MCP_ACCESS AGENT_SCOPE_MCP_ACCESS AGENT_SCOPE_MCP_WRITE MCP_SCOPE_MCP_ACCESS MCP_SCOPE_MCP_WRITE BFF_OBO_CLIENT_ID AGENT_OBO_CLIENT_ID
           if [[ -z "${LIVE_BFF_OBO_CLIENT_SECRET}" || -z "${LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET}" ]]; then
             echo "Missing required protected OBO client secret(s) in lab-live-azure-deploy." >&2
             exit 1
