@@ -3,12 +3,13 @@ import { Configuration, LogLevel, PublicClientApplication } from '@azure/msal-br
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID ?? '{tenant-id}';
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID ?? '{client-id}';
 const bffApiScope = import.meta.env.VITE_BFF_API_SCOPE ?? '{bff-api-scope}';
+const redirectOrigin = typeof window === 'undefined' ? '/' : window.location.origin;
 
 export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
-    redirectUri: window.location.origin
+    redirectUri: redirectOrigin
   },
   cache: {
     cacheLocation: 'sessionStorage',
