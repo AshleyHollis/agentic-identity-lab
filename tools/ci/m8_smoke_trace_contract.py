@@ -13,6 +13,10 @@ _REQUIRED_WORKFLOW_TOKENS = (
     "m8_browser_smoke_harness.py",
     "M9_PLAYWRIGHT_CHAT_URL",
     "M9_PLAYWRIGHT_ACCESS_TOKEN",
+    "browser_transport",
+    "M9_BROWSER_TRANSPORT",
+    "M9_AGENT_BROWSER_COMMAND",
+    "M9_BROWSER_EVIDENCE_JSON",
     "python -m playwright install chromium",
     "m8_smoke_trace_contract.py evaluate",
 )

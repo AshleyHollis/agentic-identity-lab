@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tools.ci.m8_browser_smoke_harness import validate_browser_smoke_wiring  # noqa: E402
+from tools.ci.m8_browser_smoke_harness import run_live_playwright_smoke  # noqa: E402
 from tools.ci.m8_smoke_trace_contract import (  # noqa: E402
     evaluate_trace_results,
     validate_smoke_trace_scaffold,
@@ -50,6 +51,98 @@ def test_m8_browser_smoke_harness_live_input_contract_rejects_placeholder_values
     assert any("M9_PLAYWRIGHT_ACCESS_TOKEN" in offender for offender in offenders)
     assert any("M9_PLAYWRIGHT_EXPECTED_STATUS" in offender for offender in offenders)
     assert any("M9_PLAYWRIGHT_TIMEOUT_SECONDS" in offender for offender in offenders)
+
+
+def test_m8_browser_smoke_harness_manual_artifact_contract_requires_path() -> None:
+    offenders = validate_live_inputs(env={"M9_BROWSER_TRANSPORT": "manual-artifact"})
+    assert any("M9_BROWSER_EVIDENCE_JSON" in offender for offender in offenders)
+
+
+def test_m8_browser_smoke_harness_manual_artifact_contract_accepts_path() -> None:
+    offenders = validate_live_inputs(
+        env={
+            "M9_BROWSER_TRANSPORT": "manual-artifact",
+            "M9_BROWSER_EVIDENCE_JSON": "artifacts/m9-browser-evidence.json",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+            "M9_PLAYWRIGHT_TIMEOUT_SECONDS": "30",
+        },
+    )
+    assert offenders == []
+
+
+def test_m8_browser_smoke_harness_agent_browser_contract_requires_command() -> None:
+    offenders = validate_live_inputs(
+        env={
+            "M9_BROWSER_TRANSPORT": "agent-browser",
+            "M9_PLAYWRIGHT_CHAT_URL": "https://contoso.example.com/chat/session",
+            "M9_PLAYWRIGHT_ACCESS_TOKEN": "redacted-protected-token",
+        },
+    )
+    assert any("M9_AGENT_BROWSER_COMMAND" in offender for offender in offenders)
+
+
+def test_m8_browser_smoke_harness_does_not_emit_trace_or_token_artifacts(monkeypatch) -> None:
+    class FakePage:
+        def goto(self, *_args, **_kwargs) -> None:
+            return None
+
+        def evaluate(self, *_args, **_kwargs) -> dict[str, object]:
+            return {
+                "ok": True,
+                "status": 200,
+                "sessionIdPresent": True,
+                "expiresAtPresent": True,
+            }
+
+    class FakeContext:
+        def new_page(self) -> FakePage:
+            return FakePage()
+
+        def clear_cookies(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_context(self) -> FakeContext:
+            return FakeContext()
+
+        def close(self) -> None:
+            return None
+
+    class FakeChromium:
+        def launch(self, *, headless: bool) -> FakeBrowser:
+            assert headless is True
+            return FakeBrowser()
+
+    class FakePlaywright:
+        chromium = FakeChromium()
+
+        def __enter__(self) -> "FakePlaywright":
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+    import tools.ci.m8_browser_smoke_harness as harness
+
+    monkeypatch.setattr(harness, "_load_playwright", lambda: (lambda: FakePlaywright(), Exception))
+
+    evidence, offenders = run_live_playwright_smoke(
+        {
+            "M9_PLAYWRIGHT_CHAT_URL": "https://contoso.example.com/chat/session",
+            "M9_PLAYWRIGHT_ACCESS_TOKEN": "redacted-protected-token",
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+            "M9_PLAYWRIGHT_TIMEOUT_SECONDS": "30",
+        }
+    )
+
+    assert offenders == []
+    serialized = str(evidence).lower()
+    assert "traceparent" not in serialized
+    assert "access_token" not in serialized
+    assert "redacted-protected-token" not in serialized
 
 
 def test_m8_trace_contract_static_scaffold_is_clean() -> None:

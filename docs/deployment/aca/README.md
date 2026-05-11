@@ -190,7 +190,7 @@ Configure these in protected GitHub Environments (placeholder names only in repo
 - Deploy and smoke identities must be separate from lifecycle identity, or equivalently constrained.
 - Lifecycle identity is stop/start/scale focused and must not perform broad deploy/apply/destroy.
 - Deploy-live smoke stage is opt-in (`live_azure_tests=true`) and only runs in protected manual scope.
-- Canonical smoke/trace workflow (`m8-smoke-trace.yml`) enforces `live_azure_tests=true`, runs static wiring checks (`tools/ci/m8_browser_smoke_harness.py`), validates KQL contract coverage, and includes hard-fail leakage evaluation wiring for protected live runs.
+- Canonical smoke/trace workflow (`m8-smoke-trace.yml`) enforces `live_azure_tests=true`, runs static wiring checks (`tools/ci/m8_browser_smoke_harness.py`), validates KQL contract coverage, and supports protected live browser transports (`playwright`, accepted-risk `agent-browser`, or `manual-artifact`) with hard-fail leakage evaluation.
 - Scheduled shutdown path is non-destructive and reports classifications (`stopped`,
   `scaled_to_zero`, `left_running`, `destroy_only`, `manual_follow_up_required`).
 

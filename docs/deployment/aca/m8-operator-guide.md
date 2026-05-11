@@ -78,6 +78,7 @@ python tools/ci/m8_smoke_trace_contract.py validate --workflow-file .github/work
 - Trigger `m8-smoke-trace.yml` with:
   - `live_azure_tests=true`
   - `run_live_azure_checks=true` only when live checks are explicitly approved.
+  - `browser_transport=playwright` (default), `agent-browser` (accepted-risk), or `manual-artifact` (human MFA + redacted artifact)
 - Keep artifacts sanitized; do not upload token-bearing HAR/trace/log files.
 
 ### Telemetry privacy rules
@@ -112,6 +113,9 @@ Secrets:
 - `AZURE_CLIENT_ID_SHUTDOWN`
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
+- `M9_PLAYWRIGHT_CHAT_URL` (required for `playwright` and `agent-browser` transports)
+- `M9_PLAYWRIGHT_ACCESS_TOKEN` (required for `playwright` and `agent-browser` transports)
+- `M9_AGENT_BROWSER_COMMAND` (required for `agent-browser` transport)
 - `APPLICATIONINSIGHTS_CONNECTION_STRING` (or approved managed identity equivalent)
 - `APIM_SUBSCRIPTION_KEY` (only if route requires it)
 
@@ -131,6 +135,9 @@ Variables:
 - `LIVE_AGENT_EXECUTION_AUDIENCE`
 - `LIVE_MCP_AUDIENCE`
 - `AZURE_RESOURCE_GROUP`
+- `M9_BROWSER_TRANSPORT`
+- `M9_BROWSER_EVIDENCE_JSON` (required for `manual-artifact` transport)
+- `M9_AGENT_BROWSER_TIMEOUT_SECONDS` (optional for `agent-browser` transport)
 - `APIM_RESOURCE_GROUP`
 - `ACA_APP_NAMES`
 - `APIM_SERVICE_NAME`

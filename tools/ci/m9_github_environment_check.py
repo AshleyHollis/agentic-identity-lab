@@ -59,14 +59,13 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
                 "M8_READINESS_URL",
             ),
             "lab-live-azure-smoke": (
-                "LIVE_APIM_BASE_URL",
-                "LIVE_READINESS_URL",
-                "LIVE_SMOKE_CLIENT_ID",
-                "LIVE_AUTHORITY_HOST",
-                "LIVE_SMOKE_SCOPES",
-                "LIVE_BFF_AUDIENCE",
-                "LIVE_AGENT_EXECUTION_AUDIENCE",
-                "LIVE_MCP_AUDIENCE",
+                "AZURE_RESOURCE_GROUP",
+                "M9_BROWSER_TRANSPORT",
+                "M9_BROWSER_EVIDENCE_JSON",
+                "M9_AGENT_BROWSER_TIMEOUT_SECONDS",
+                "M9_PLAYWRIGHT_EXPECTED_STATUS",
+                "M9_PLAYWRIGHT_TIMEOUT_SECONDS",
+                "M9_PLAYWRIGHT_DISPLAY_NAME",
             ),
         },
     ),
@@ -94,6 +93,17 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
         },
         required_variables={
             "lab-live-azure-smoke": (
+                "AZURE_RESOURCE_GROUP",
+                "M9_BROWSER_TRANSPORT",
+            ),
+        },
+        optional_variables={
+            "lab-live-azure-smoke": (
+                "M9_BROWSER_EVIDENCE_JSON",
+                "M9_AGENT_BROWSER_TIMEOUT_SECONDS",
+                "M9_PLAYWRIGHT_EXPECTED_STATUS",
+                "M9_PLAYWRIGHT_TIMEOUT_SECONDS",
+                "M9_PLAYWRIGHT_DISPLAY_NAME",
                 "LIVE_APIM_BASE_URL",
                 "LIVE_READINESS_URL",
                 "LIVE_SMOKE_CLIENT_ID",
@@ -104,7 +114,6 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
                 "LIVE_MCP_AUDIENCE",
             ),
         },
-        optional_variables={},
     ),
 }
 
@@ -142,7 +151,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _fetch_environment_names(repo: str) -> set[str]:
-    cmd = ["gh", "api", f"repos/{repo}/environments", "--jq", ".environments[].name"]
+    cmd = [
+        "gh",
+        "api",
+        f"repos/{repo}/environments",
+        "--paginate",
+        "--jq",
+        ".environments[].name",
+    ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         stderr = proc.stderr.strip() or "gh api call failed"
@@ -158,6 +174,7 @@ def _fetch_environment_metadata_names(repo: str, environment: str, metadata: str
         "gh",
         "api",
         f"repos/{repo}/environments/{environment}/{metadata}",
+        "--paginate",
         "--jq",
         f".{metadata}[].name",
     ]

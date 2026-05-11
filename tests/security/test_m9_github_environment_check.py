@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tools.ci.m9_github_environment_check import (  # noqa: E402
     _CONTRACT_PROFILES,
+    _fetch_environment_metadata_names,
+    _fetch_environment_names,
     evaluate_contract,
 )
 
@@ -54,7 +57,7 @@ def test_zero_mutation_profile_requires_identity_secrets_but_not_runtime_variabl
     assert "lab-live-azure-smoke" in result["missing_optional_variables"]
 
 
-def test_smoke_runtime_profile_flags_missing_live_smoke_variables() -> None:
+def test_smoke_runtime_profile_requires_transport_and_resource_group_variables() -> None:
     profile = _CONTRACT_PROFILES["smoke-runtime"]
     existing = {"lab-live-azure-smoke"}
     secrets = {
@@ -69,10 +72,35 @@ def test_smoke_runtime_profile_flags_missing_live_smoke_variables() -> None:
         profile=profile,
         existing_environments=existing,
         secrets_by_environment=secrets,
-        variables_by_environment={"lab-live-azure-smoke": {"LIVE_APIM_BASE_URL"}},
+        variables_by_environment={"lab-live-azure-smoke": {"AZURE_RESOURCE_GROUP"}},
     )
 
     missing_vars = result["missing_required_variables"]["lab-live-azure-smoke"]
-    assert "LIVE_SMOKE_SCOPES" in missing_vars
-    assert "LIVE_BFF_AUDIENCE" in missing_vars
-    assert "LIVE_APIM_BASE_URL" not in missing_vars
+    assert "M9_BROWSER_TRANSPORT" in missing_vars
+    assert "AZURE_RESOURCE_GROUP" not in missing_vars
+
+
+def test_fetch_environment_names_uses_paginate() -> None:
+    with patch("tools.ci.m9_github_environment_check.subprocess.run") as run:
+        run.return_value.returncode = 0
+        run.return_value.stdout = "lab-live-azure-smoke\n"
+        run.return_value.stderr = ""
+        result = _fetch_environment_names("AshleyHollis/agentic-identity-lab")
+
+    assert result == {"lab-live-azure-smoke"}
+    command = run.call_args.args[0]
+    assert "--paginate" in command
+
+
+def test_fetch_environment_metadata_names_uses_paginate() -> None:
+    with patch("tools.ci.m9_github_environment_check.subprocess.run") as run:
+        run.return_value.returncode = 0
+        run.return_value.stdout = "LIVE_APIM_BASE_URL\n"
+        run.return_value.stderr = ""
+        result = _fetch_environment_metadata_names(
+            "AshleyHollis/agentic-identity-lab", "lab-live-azure-smoke", "variables"
+        )
+
+    assert result == {"LIVE_APIM_BASE_URL"}
+    command = run.call_args.args[0]
+    assert "--paginate" in command

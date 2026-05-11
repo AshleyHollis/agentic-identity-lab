@@ -77,3 +77,31 @@ def test_deploy_smoke_stage_runs_local_contract_validation() -> None:
         "validate_m8_kql_contract.py" in deploy
         or "./.github/workflows/m8-smoke-trace.yml" in deploy
     )
+
+
+def test_smoke_workflow_requires_playwright_protected_inputs() -> None:
+    smoke = _read(ROOT / ".github" / "workflows" / "m8-smoke-trace.yml")
+    assert "M9_PLAYWRIGHT_CHAT_URL" in smoke
+    assert "M9_PLAYWRIGHT_ACCESS_TOKEN" in smoke
+    assert "browser_transport" in smoke
+    assert "M9_BROWSER_TRANSPORT" in smoke
+    assert "agent-browser" in smoke
+    assert "manual-artifact" in smoke
+    assert "M9_AGENT_BROWSER_COMMAND" in smoke
+    assert "M9_BROWSER_EVIDENCE_JSON" in smoke
+    assert "python -m playwright install chromium" in smoke
+    assert "python tools/ci/m8_browser_smoke_harness.py --mode live" in smoke
+
+
+def test_agent_browser_risk_acceptance_controls_are_documented() -> None:
+    security = _read(ROOT / "SECURITY.md").lower()
+    playwright = _read(ROOT / "docs" / "testing" / "playwright.md").lower()
+    required_phrases = (
+        "protected, manually invoked workflows",
+        "mfa remains manual-only",
+        "do not save, upload, or commit browser storage state",
+        "no tokens, cookies, storage-state, trace ids, claims, pii, endpoints",
+    )
+    combined = f"{security}\n{playwright}"
+    for phrase in required_phrases:
+        assert phrase in combined

@@ -21,6 +21,16 @@ on:
         required: false
         default: false
         type: boolean
+      browser_transport:
+        description: "Live browser transport: playwright, agent-browser, or manual-artifact"
+        required: false
+        default: "playwright"
+        type: string
+      browser_evidence_json:
+        description: "Manual artifact JSON path for manual-artifact transport"
+        required: false
+        default: ""
+        type: string
       kql_lookback:
         description: "KQL lookback window for trace verification"
         required: false
@@ -41,6 +51,14 @@ on:
         required: false
         type: boolean
         default: false
+      browser_transport:
+        required: false
+        type: string
+        default: "playwright"
+      browser_evidence_json:
+        required: false
+        type: string
+        default: ""
       kql_lookback:
         required: false
         type: string
@@ -55,6 +73,8 @@ on:
       M9_PLAYWRIGHT_CHAT_URL:
         required: false
       M9_PLAYWRIGHT_ACCESS_TOKEN:
+        required: false
+      M9_AGENT_BROWSER_COMMAND:
         required: false
 
 permissions:
@@ -83,6 +103,7 @@ jobs:
             echo "- environment_slug: ${{ inputs.environment_slug }}"
             echo "- deployment_label: ${{ inputs.deployment_label || '<none>' }}"
             echo "- run_live_azure_checks: ${{ inputs.run_live_azure_checks }}"
+            echo "- browser_transport: ${{ inputs.browser_transport }}"
             echo "- LIVE_AZURE_TESTS: ${LIVE_AZURE_TESTS}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -155,9 +176,13 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       LIVE_AZURE_TESTS: ${{ inputs.live_azure_tests }}
+      M9_BROWSER_TRANSPORT: ${{ inputs.browser_transport || vars.M9_BROWSER_TRANSPORT }}
       KQL_LOOKBACK: ${{ inputs.kql_lookback }}
       M9_PLAYWRIGHT_CHAT_URL: ${{ secrets.M9_PLAYWRIGHT_CHAT_URL }}
       M9_PLAYWRIGHT_ACCESS_TOKEN: ${{ secrets.M9_PLAYWRIGHT_ACCESS_TOKEN }}
+      M9_AGENT_BROWSER_COMMAND: ${{ secrets.M9_AGENT_BROWSER_COMMAND }}
+      M9_BROWSER_EVIDENCE_JSON: ${{ inputs.browser_evidence_json || vars.M9_BROWSER_EVIDENCE_JSON }}
+      M9_AGENT_BROWSER_TIMEOUT_SECONDS: ${{ vars.M9_AGENT_BROWSER_TIMEOUT_SECONDS }}
       M9_PLAYWRIGHT_EXPECTED_STATUS: ${{ vars.M9_PLAYWRIGHT_EXPECTED_STATUS }}
       M9_PLAYWRIGHT_TIMEOUT_SECONDS: ${{ vars.M9_PLAYWRIGHT_TIMEOUT_SECONDS }}
       M9_PLAYWRIGHT_DISPLAY_NAME: ${{ vars.M9_PLAYWRIGHT_DISPLAY_NAME }}
@@ -177,9 +202,23 @@ jobs:
           test -n "${AZURE_CLIENT_ID}"
           test -n "${AZURE_TENANT_ID}"
           test -n "${AZURE_SUBSCRIPTION_ID}"
-          python tools/ci/m9_live_preflight.py \
-            --context smoke-identity \
-            --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN
+          browser_transport="${M9_BROWSER_TRANSPORT:-playwright}"
+          if [[ "${browser_transport}" == "playwright" ]]; then
+            python tools/ci/m9_live_preflight.py \
+              --context smoke-identity \
+              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN
+          elif [[ "${browser_transport}" == "manual-artifact" ]]; then
+            python tools/ci/m9_live_preflight.py \
+              --context smoke-manual-evidence \
+              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_BROWSER_EVIDENCE_JSON
+          elif [[ "${browser_transport}" == "agent-browser" ]]; then
+            python tools/ci/m9_live_preflight.py \
+              --context smoke-identity \
+              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN M9_AGENT_BROWSER_COMMAND
+          else
+            echo "Unsupported browser transport: ${browser_transport}"
+            exit 1
+          fi
           if [[ "${LIVE_AZURE_TESTS}" != "true" ]]; then
             echo "Live smoke/trace execution requires LIVE_AZURE_TESTS=true."
             exit 1
@@ -220,6 +259,7 @@ jobs:
           done
 
       - name: Install Playwright runtime for live smoke
+        if: ${{ env.M9_BROWSER_TRANSPORT == '' || env.M9_BROWSER_TRANSPORT == 'playwright' }}
         shell: bash
         run: |
           set -euo pipefail
