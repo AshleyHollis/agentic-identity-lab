@@ -4,10 +4,10 @@
   "private": true,
   "description": "Minimal SPFx web part placeholder for M7 T04.",
   "scripts": {
-    "build": "node .\\node_modules\\gulp-cli\\bin\\gulp.js build",
+    "build": "node ./node_modules/gulp-cli/bin/gulp.js build",
     "build:ts": "tsc -p tsconfig.json",
-    "clean": "node .\\node_modules\\gulp-cli\\bin\\gulp.js clean",
-    "test": "node --test .\\tests\\*.test.js"
+    "clean": "node ./node_modules/gulp-cli/bin/gulp.js clean",
+    "test": "node --test ./tests/*.test.js"
   },
   "dependencies": {
     "@microsoft/sp-core-library": "1.19.0",
