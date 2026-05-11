@@ -21,6 +21,10 @@ When `MCP_CHAIN_ENABLED=true`, invoke endpoints call MCP `POST /tools/authorizat
 - `MCP_PROTECTED_API_BASE_URL` (required when chain is enabled)
 - `MCP_AUTHORIZATION_CHECK_PATH` (default: `/tools/authorization-check`)
 - `DOWNSTREAM_TIMEOUT_SECONDS` (default: `10`)
+- Strict mode with `MCP_CHAIN_ENABLED=true` also requires protected Entra OBO settings:
+  `OBO_TOKEN_URL`, `OBO_CLIENT_ID`, `OBO_CLIENT_SECRET`, and `OBO_REQUIRED_SCOPES`.
+  Agent Execution exchanges the inbound Agent-audience token and sends only the MCP-audience
+  token to MCP.
 
 ## Run locally (Windows)
 1. Copy `config/env/agent-execution.env.example` to `config/env/agent-execution.env` and update as needed.

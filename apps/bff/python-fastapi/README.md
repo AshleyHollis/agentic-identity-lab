@@ -32,6 +32,9 @@ No raw bearer token or PII is included in the response.
 - `AGENT_EXECUTION_BASE_URL` (required when chain is enabled)
 - `AGENT_EXECUTION_INVOKE_PATH` (default: `/agent/invoke`)
 - `DOWNSTREAM_TIMEOUT_SECONDS` (default: `10`)
+- Strict mode also requires protected Entra OBO settings: `OBO_TOKEN_URL`, `OBO_CLIENT_ID`,
+  `OBO_CLIENT_SECRET`, and `OBO_REQUIRED_SCOPES`. The BFF exchanges the inbound BFF-audience
+  token and sends only the Agent-audience token downstream.
 
 ## `userId` Display-Only Rule
 

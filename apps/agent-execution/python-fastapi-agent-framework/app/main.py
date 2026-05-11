@@ -127,9 +127,24 @@ def _invoke_response(
         aud=auth_context.audiences[0] if auth_context.audiences else None,
     )
     obo_exchange = None
-    if auth_context.authorized and auth_context.token_type == "delegated":
+    should_exchange_obo = (
+        auth_context.authorized
+        and auth_context.token_type == "delegated"
+        and (settings.auth_mode != AuthMode.STRICT or settings.mcp_chain_enabled)
+    )
+    if should_exchange_obo:
         record_obo_attributes(obo_hop="agent_obo")
-        obo_exchange = exchange_for_mcp(auth_context, settings)
+        try:
+            obo_exchange = exchange_for_mcp(
+                auth_context,
+                settings,
+                http_request.headers.get("authorization"),
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="obo_exchange_failed",
+            ) from exc
     obo_claims = obo_exchange.claims if obo_exchange else {}
     mcp_authorized = None
     mcp_correlation_id = None

@@ -8,7 +8,9 @@ from fastapi import Header, HTTPException, Request, status
 from identity_lab_auth import (
     AuthContext,
     AuthMode,
+    EntraOboConfig,
     classify_claims_token_type,
+    exchange_entra_on_behalf_of,
     exchange_on_behalf_of,
     load_auth_claims,
     load_auth_settings,
@@ -144,14 +146,46 @@ def resolve_auth_context(headers: Mapping[str, str]) -> AuthContext:
     return context
 
 
-def exchange_for_mcp(context: AuthContext, settings: Settings | None = None) -> OboExchange:
+def exchange_for_mcp(
+    context: AuthContext,
+    settings: Settings | None = None,
+    authorization: str | None = None,
+) -> OboExchange:
     active_settings = settings or load_settings()
+    if active_settings.auth_mode == AuthMode.STRICT:
+        return exchange_strict_for_mcp(context, authorization, active_settings)
     obo_claims = exchange_on_behalf_of(
         context,
         downstream_audience=active_settings.obo_downstream_audience,
         downstream_scopes=active_settings.obo_required_scopes,
     )
     return OboExchange(authorization="Bearer obo-token", claims=obo_claims)
+
+
+def exchange_strict_for_mcp(
+    context: AuthContext,
+    authorization: str | None,
+    settings: Settings | None = None,
+) -> OboExchange:
+    active_settings = settings or load_settings()
+    if active_settings.auth_mode != AuthMode.STRICT:
+        return exchange_for_mcp(context, active_settings)
+    authorization_header = exchange_entra_on_behalf_of(
+        authorization,
+        config=EntraOboConfig(
+            token_url=active_settings.obo_token_url,
+            client_id=active_settings.obo_client_id,
+            client_secret=active_settings.obo_client_secret,
+            scopes=active_settings.obo_required_scopes,
+            timeout_seconds=active_settings.downstream_timeout_seconds,
+        ),
+        context="Strict Agent to MCP chain",
+    )
+    obo_claims = {
+        "aud": active_settings.obo_downstream_audience,
+        "scp": " ".join(active_settings.obo_required_scopes),
+    }
+    return OboExchange(authorization=authorization_header, claims=obo_claims)
 
 
 def get_auth_context(

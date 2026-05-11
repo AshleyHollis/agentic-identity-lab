@@ -41,7 +41,12 @@ from .jwks import (
     _validate_algorithm,
     validate_strict,
 )
-from .obo import exchange_on_behalf_of
+from .obo import (
+    EntraOboConfig,
+    exchange_entra_on_behalf_of,
+    exchange_on_behalf_of,
+    validate_entra_obo_config,
+)
 from .telemetry import (
     get_tracer,
     instrument_fastapi,
@@ -82,7 +87,10 @@ __all__ = [
     "sanitize_claims",
     "select_fixture_name",
     "validate_strict_config",
+    "EntraOboConfig",
+    "exchange_entra_on_behalf_of",
     "exchange_on_behalf_of",
+    "validate_entra_obo_config",
     "get_tracer",
     "instrument_fastapi",
     "record_auth_attributes",

@@ -5,10 +5,12 @@ import os
 
 from identity_lab_auth import (
     AuthMode,
+    EntraOboConfig,
     ISSUER_PLACEHOLDER,
     JWKS_URL_PLACEHOLDER,
     TRUSTED_TENANT_PLACEHOLDER,
     load_auth_mode,
+    validate_entra_obo_config,
     validate_strict_config,
 )
 from identity_lab_auth.agent_obo import BLUEPRINT_AUDIENCE_PLACEHOLDER
@@ -39,6 +41,9 @@ class Settings:
     trusted_tenants: list[str]
     obo_downstream_audience: str
     obo_required_scopes: list[str]
+    obo_token_url: str
+    obo_client_id: str
+    obo_client_secret: str
     enable_debug_claims: bool
     correlation_header: str
     blueprint_audience: str
@@ -77,6 +82,9 @@ def load_settings() -> Settings:
             os.getenv("OBO_REQUIRED_SCOPES"),
             ["mcp.access", "mcp.write"],
         ),
+        obo_token_url=os.getenv("OBO_TOKEN_URL", ""),
+        obo_client_id=os.getenv("OBO_CLIENT_ID", ""),
+        obo_client_secret=os.getenv("OBO_CLIENT_SECRET", ""),
         enable_debug_claims=_parse_bool(os.getenv("ENABLE_DEBUG_CLAIMS"), False),
         correlation_header=os.getenv("CORRELATION_HEADER", "x-correlation-id"),
         blueprint_audience=os.getenv("BLUEPRINT_AUDIENCE", BLUEPRINT_AUDIENCE_PLACEHOLDER),
@@ -108,5 +116,16 @@ def load_settings() -> Settings:
                 "Strict auth mode requires BLUEPRINT_AUDIENCE to be set to a real "
                 "audience URI. The placeholder value is not permitted in strict mode "
                 "(T12 binding condition C1)."
+            )
+        if settings.mcp_chain_enabled:
+            validate_entra_obo_config(
+                EntraOboConfig(
+                    token_url=settings.obo_token_url,
+                    client_id=settings.obo_client_id,
+                    client_secret=settings.obo_client_secret,
+                    scopes=settings.obo_required_scopes,
+                    timeout_seconds=settings.downstream_timeout_seconds,
+                ),
+                context="Strict Agent to MCP chain",
             )
     return settings

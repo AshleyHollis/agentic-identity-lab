@@ -15,6 +15,7 @@ from .config import load_settings
 from .diagnostics import build_health_payload, build_ready_payload
 
 from identity_lab_auth import AUTH_FIXTURE_HEADER, AuthMode
+from identity_lab_auth.obo import EntraOboConfig, exchange_entra_on_behalf_of
 from identity_lab_auth.telemetry import (
     get_tracer,
     setup_telemetry,
@@ -57,7 +58,25 @@ def _build_forward_headers(request: Request, auth_context: AuthContext) -> dict[
         settings.correlation_header: auth_context.correlation_id or "",
     }
     authorization = request.headers.get("authorization")
-    if authorization:
+    if authorization and settings.auth_mode == AuthMode.STRICT:
+        try:
+            headers["Authorization"] = exchange_entra_on_behalf_of(
+                authorization,
+                config=EntraOboConfig(
+                    token_url=settings.obo_token_url,
+                    client_id=settings.obo_client_id,
+                    client_secret=settings.obo_client_secret,
+                    scopes=settings.obo_required_scopes,
+                    timeout_seconds=settings.downstream_timeout_seconds,
+                ),
+                context="Strict BFF to Agent chain",
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="obo_exchange_failed",
+            ) from exc
+    elif authorization:
         headers["Authorization"] = authorization
     traceparent = request.headers.get("traceparent")
     if traceparent:
