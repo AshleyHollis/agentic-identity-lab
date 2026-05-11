@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "status": 200,
+  "sessionIdPresent": true,
+  "expiresAtPresent": true,
+  "resultSource": "direct-bff-az-token",
+  "targetUrlDigest": "e386031498e8",
+  "fixes": {
+    "bffAppRequestedAccessTokenVersion": 2,
+    "bffPreAuthorizedAzureCli": true,
+    "bffAllowedAudiencesUpdated": true,
+    "bffAuthIssuerUpdatedToV2": true
+  }
+}

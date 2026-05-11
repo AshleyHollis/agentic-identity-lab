@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 
+AZURE_CLI_APP_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
+
+
 @dataclass(frozen=True)
 class AppSpec:
     key: str
@@ -252,6 +255,8 @@ def bootstrap(environment: str) -> dict[str, str]:
             "api": {
                 "oauth2PermissionScopes": merged_scopes,
                 "preAuthorizedApplications": existing_api.get("preAuthorizedApplications", []),
+                # Force v2.0 access tokens so aud claim is the appId UUID (not the identifier URI).
+                "requestedAccessTokenVersion": 2,
             },
         }
         if spec.public_client:
@@ -260,6 +265,7 @@ def bootstrap(environment: str) -> dict[str, str]:
         _patch_application(app_object_ids[key], patch_payload)
 
     bff_scopes = [scope_ids_by_app["bff"]["mcp.access"]]
+    bff_all_scopes = [scope_ids_by_app["bff"]["mcp.access"], scope_ids_by_app["bff"]["access_as_user"]]
     agent_scopes = [scope_ids_by_app["agent"]["mcp.access"], scope_ids_by_app["agent"]["mcp.write"]]
     mcp_scopes = [scope_ids_by_app["mcp"]["mcp.access"], scope_ids_by_app["mcp"]["mcp.write"]]
 
@@ -276,11 +282,18 @@ def bootstrap(environment: str) -> dict[str, str]:
                     bff_api.get("oauth2PermissionScopes", []) if isinstance(bff_api.get("oauth2PermissionScopes"), list) else [],
                     specs["bff"].scopes,
                 ),
+                # Pre-authorize smoke-client (mcp.access only) and Azure CLI (all BFF scopes so
+                # delegated token requests via 'az account get-access-token' work without admin consent).
                 "preAuthorizedApplications": _merge_preauthorized(
-                    bff_api.get("preAuthorizedApplications", []) if isinstance(bff_api.get("preAuthorizedApplications"), list) else [],
-                    app_ids["smoke"],
-                    bff_scopes,
+                    _merge_preauthorized(
+                        bff_api.get("preAuthorizedApplications", []) if isinstance(bff_api.get("preAuthorizedApplications"), list) else [],
+                        app_ids["smoke"],
+                        bff_scopes,
+                    ),
+                    AZURE_CLI_APP_ID,
+                    bff_all_scopes,
                 ),
+                "requestedAccessTokenVersion": 2,
             }
         },
     )
@@ -353,9 +366,12 @@ def bootstrap(environment: str) -> dict[str, str]:
     )
 
     return {
-        "bff_audience": audiences["bff"],
-        "agent_execution_audience": audiences["agent"],
-        "mcp_audience": audiences["mcp"],
+        # With requestedAccessTokenVersion=2, access tokens carry aud=<appId UUID>.
+        # Include both the identifier URI (api://...) and the raw UUID so container apps
+        # with ALLOWED_AUDIENCES accept both v1.0 and v2.0 token formats.
+        "bff_audience": f"{audiences['bff']},{app_ids['bff']}",
+        "agent_execution_audience": f"{audiences['agent']},{app_ids['agent']}",
+        "mcp_audience": f"{audiences['mcp']},{app_ids['mcp']}",
         "blueprint_audience": audiences["bff"],
         "bff_scope_mcp_access": f"{audiences['bff']}/mcp.access",
         "bff_scope_access_as_user": f"{audiences['bff']}/access_as_user",
