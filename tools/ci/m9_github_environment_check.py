@@ -89,13 +89,15 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
     "smoke-runtime": ContractProfile(
         required_environments=("lab-live-azure-smoke",),
         required_secrets={
-            "lab-live-azure-smoke": _ZERO_MUTATION_REQUIRED_SECRETS["lab-live-azure-smoke"],
+            "lab-live-azure-smoke": (
+                *_ZERO_MUTATION_REQUIRED_SECRETS["lab-live-azure-smoke"],
+                "LIVE_SMOKE_SCOPES",
+            ),
         },
         required_variables={
             "lab-live-azure-smoke": (
                 "AZURE_RESOURCE_GROUP",
                 "M9_BROWSER_TRANSPORT",
-                "LIVE_SMOKE_SCOPES",
             ),
         },
         optional_variables={
@@ -109,7 +111,6 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
                 "LIVE_READINESS_URL",
                 "LIVE_SMOKE_CLIENT_ID",
                 "LIVE_AUTHORITY_HOST",
-                "LIVE_SMOKE_SCOPES",
                 "LIVE_BFF_AUDIENCE",
                 "LIVE_AGENT_EXECUTION_AUDIENCE",
                 "LIVE_MCP_AUDIENCE",

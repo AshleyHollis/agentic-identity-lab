@@ -75,9 +75,10 @@ def test_smoke_runtime_profile_requires_transport_and_resource_group_variables()
         variables_by_environment={"lab-live-azure-smoke": {"AZURE_RESOURCE_GROUP"}},
     )
 
+    missing_secrets = result["missing_required_secrets"]["lab-live-azure-smoke"]
     missing_vars = result["missing_required_variables"]["lab-live-azure-smoke"]
+    assert "LIVE_SMOKE_SCOPES" in missing_secrets
     assert "M9_BROWSER_TRANSPORT" in missing_vars
-    assert "LIVE_SMOKE_SCOPES" in missing_vars
     assert "AZURE_RESOURCE_GROUP" not in missing_vars
 
 

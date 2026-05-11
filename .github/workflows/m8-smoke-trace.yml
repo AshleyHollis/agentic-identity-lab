@@ -76,6 +76,8 @@ on:
         required: false
       M9_AGENT_BROWSER_COMMAND:
         required: false
+      LIVE_SMOKE_SCOPES:
+        required: false
 
 permissions:
   contents: read
@@ -181,7 +183,7 @@ jobs:
       M9_PLAYWRIGHT_CHAT_URL: ${{ secrets.M9_PLAYWRIGHT_CHAT_URL }}
       M9_PLAYWRIGHT_ACCESS_TOKEN: ${{ secrets.M9_PLAYWRIGHT_ACCESS_TOKEN }}
       M9_AGENT_BROWSER_COMMAND: ${{ secrets.M9_AGENT_BROWSER_COMMAND }}
-      LIVE_SMOKE_SCOPES: ${{ vars.LIVE_SMOKE_SCOPES }}
+      LIVE_SMOKE_SCOPES: ${{ secrets.LIVE_SMOKE_SCOPES }}
       M9_BROWSER_EVIDENCE_JSON: ${{ inputs.browser_evidence_json || vars.M9_BROWSER_EVIDENCE_JSON }}
       M9_AGENT_BROWSER_TIMEOUT_SECONDS: ${{ vars.M9_AGENT_BROWSER_TIMEOUT_SECONDS }}
       M9_PLAYWRIGHT_EXPECTED_STATUS: ${{ vars.M9_PLAYWRIGHT_EXPECTED_STATUS }}

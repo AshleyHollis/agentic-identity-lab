@@ -262,6 +262,14 @@ def _scan_workflow_policies(workflows_dir: Path) -> list[str]:
         smoke_text = M8_SMOKE_TRACE_WORKFLOW.read_text(encoding="utf-8", errors="ignore")
         if "secrets.AZURE_CLIENT_ID_SMOKE" not in smoke_text:
             offenders.append(f"{M8_SMOKE_TRACE_WORKFLOW}: missing smoke identity placeholder")
+        if "LIVE_SMOKE_SCOPES: ${{ secrets.LIVE_SMOKE_SCOPES }}" not in smoke_text:
+            offenders.append(
+                f"{M8_SMOKE_TRACE_WORKFLOW}: LIVE_SMOKE_SCOPES must be secret-backed"
+            )
+        if "LIVE_SMOKE_SCOPES: ${{ vars.LIVE_SMOKE_SCOPES }}" in smoke_text:
+            offenders.append(
+                f"{M8_SMOKE_TRACE_WORKFLOW}: LIVE_SMOKE_SCOPES must not be variable-backed"
+            )
         if "live_azure_tests" not in smoke_text.lower() or "workflow_call" not in smoke_text.lower():
             offenders.append(
                 f"{M8_SMOKE_TRACE_WORKFLOW}: smoke workflow must enforce live_azure_tests and support workflow_call"
