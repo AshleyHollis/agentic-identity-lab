@@ -11,14 +11,14 @@
 | T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
 | T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `25642915504` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
 | T08 | Runtime configuration verification | Tank / Neo | T07 | ✅ Complete (ACA/APIM runtime posture verified; strict auth/App Insights/runtime ports confirmed; run `25644428588` also verified live runtime telemetry) |
-| T09 | Browser smoke execution | Mouse / Neo | T08 | Blocked for real delegated-browser smoke (missing protected `LIVE_*` smoke runtime vars/test identity); protected live readiness smoke run `25644428588` passed for BFF + Agent Execution + MCP |
+| T09 | Browser / agent-browser smoke execution | Mouse / Neo | T08 | Blocked pending a real live delegated E2E run; Ashley accepts controlled agent-browser use and manual-only Entra MFA, but completion still requires browser/agent-browser full flow through APIM plus redacted trace/log proof |
 | T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete for readiness-generated live traces (protected Azure Monitor KQL verification in run `25644428588` observed BFF, Agent Execution, and MCP roles) |
 | T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete for readiness-generated live telemetry (protected run `25644428588` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
-| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress |
+| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress (readiness evidence exists; final package must add the live browser/agent-browser E2E proof without IDs, endpoints, tokens, cookies, usernames, raw claims, screenshots, HAR, raw traces, or raw KQL rows) |
 | T13 | Cost-control shutdown verification | Tank | T09 | ✅ Complete (protected shutdown run `25644655120`; all ACA apps min replicas restored to 0) |
-| T14 | Deployment readiness review | Tank | T01-T08, T13 | In progress / blocked on real delegated-browser smoke prerequisites |
+| T14 | Deployment readiness review | Tank | T01-T08, T13 | In progress / blocked on live browser/agent-browser E2E evidence and shutdown verification for that run; not blocked on automating Entra MFA |
 | T15 | Security/evidence review | Trinity | T03, T11, T12 | Pending |
-| T16 | Architecture closeout review | Morpheus | T12-T15 | Pending |
+| T16 | Architecture closeout review | Morpheus | T12-T15 | Pending (acceptance bar amended: manual MFA is allowed; controlled agent-browser is accepted; blocked until real live E2E evidence + reviewer gates) |
 | T17 | Final M9 closeout | Morpheus | T16 | Pending |
 
 ## Pre-live validation commands
@@ -30,9 +30,13 @@ python tools\ci\m8_browser_smoke_harness.py --mode static
 python tools\ci\m8_smoke_trace_contract.py validate --workflow-file .github\workflows\m8-smoke-trace.yml --positive-kql tools\telemetry\kql\m8-positive-chain.kql --negative-kql tools\telemetry\kql\m8-negative-leakage.kql
 ```
 
+## Amended M9 acceptance
+
+M9 is complete only after a protected live run demonstrates the full browser/agent-browser path through APIM, BFF, Agent Execution Service, and MCP with a real delegated token. Manual Entra MFA is acceptable for the human-operated sign-in step. Agent-browser use is accepted risk only with controls: protected environment approval, ephemeral browser state, no persisted cookies/tokens/storage, redacted logs/evidence, positive trace/log proof, negative leakage proof, and verified shutdown/scale-down after the run. Existing readiness telemetry remains prerequisite evidence, not full E2E completion.
+
 ## Live block
 
-T07 and later live-mutation tasks require explicit protected workflow inputs and environment approval. Ashley's standing directive is to continue through deployment and end-to-end verification while attempting access first; live mutations still must remain inside protected GitHub Environment gates and redacted evidence rules.
+T07 and later live-mutation tasks require explicit protected workflow inputs and environment approval. Ashley's standing directive is to continue through deployment and end-to-end verification while attempting access first; live mutations still must remain inside protected GitHub Environment gates and redacted evidence rules. For M9 closeout, Entra MFA may remain manual-only and does not have to be solved for automation. A controlled agent-browser path is accepted risk when it improves live E2E verification, provided no browser state, cookies, tokens, usernames, raw claims, endpoints, screenshots, HAR files, raw traces, or raw KQL rows are committed or published.
 
 ## External setup prerequisite for T01/T02
 

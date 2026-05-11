@@ -19,8 +19,8 @@ ACA remains the M9 live target. AKS Agent Gateway / `agentgateway.dev` remains o
 2. Dispatch `.github\workflows\m8-live-oidc-contract.yml` for zero-mutation OIDC checks.
 3. Dispatch `.github\workflows\m8-deploy-live.yml` first with mutation toggles disabled, then with approved mutation scope.
 4. Dispatch `.github\workflows\m8-start-resume.yml` if needed.
-5. Dispatch `.github\workflows\m8-smoke-trace.yml` with `LIVE_AZURE_TESTS=true` and protected live checks enabled.
-6. Run positive and negative KQL contracts.
+5. Dispatch `.github\workflows\m8-smoke-trace.yml` with `LIVE_AZURE_TESTS=true` and protected live checks enabled. For the final M9 proof, the smoke may use browser automation or a controlled agent-browser session; Entra MFA may be completed manually by the human operator.
+6. Run positive and negative KQL contracts for that same live E2E smoke window.
 7. Produce redacted evidence summary.
 8. Verify `.github\workflows\m8-nightly-shutdown.yml` or an approved manual ops shutdown.
 
@@ -74,3 +74,13 @@ Forbidden public evidence:
 **Rationale:** Live verification crosses infrastructure, identity, telemetry safety, public workflow safety, and cost controls.
 
 **Status:** Accepted for M9 planning.
+
+## ADR-M9-05 — Accepted-risk agent-browser path with manual MFA
+
+**Decision:** M9 may use a controlled agent-browser path for the live browser proof, and Entra MFA may remain manual-only for the human operator. This changes acceptance from requiring fully automated MFA/browser sign-in to requiring a protected live browser or agent-browser full-flow proof.
+
+**Controls:** Use protected GitHub Environment approval, human-operated sign-in, ephemeral browser state, no committed or published cookies/tokens/storage state/usernames/raw claims/endpoints/screenshots/HAR/raw traces/raw KQL rows, positive correlated trace/log proof, negative leakage proof, redacted evidence, and verified shutdown/scale-down.
+
+**Non-goal:** This ADR does not mark M9 E2E complete. Readiness telemetry remains prerequisite evidence until a real live browser/agent-browser run exercises browser -> APIM -> BFF -> Agent Execution Service -> MCP and passes trace/log, leakage, evidence, review, and shutdown gates.
+
+**Status:** Accepted by Ashley directive for M9 amendment.

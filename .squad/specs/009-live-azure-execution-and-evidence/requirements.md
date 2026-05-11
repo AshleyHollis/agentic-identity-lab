@@ -5,7 +5,7 @@
 - FR-01: Use the M8 protected workflow family unless an approved ADR changes the topology.
 - FR-02: Deploy/update resource group, ACR, ACA environment/apps, APIM, managed identities, App Insights, and Log Analytics.
 - FR-03: Run BFF, Agent Execution Service, and MCP Protected API in strict auth mode.
-- FR-04: Execute browser smoke with a real delegated Entra token and APIM front-door call.
+- FR-04: Execute browser or controlled agent-browser smoke with a real delegated Entra token and APIM front-door call; Entra MFA may be completed manually by the human operator.
 - FR-05: Preserve the OBO boundary: only Agent Execution Service exchanges for the MCP audience.
 - FR-06: Emit a non-secret correlation marker for KQL proof.
 
@@ -20,6 +20,7 @@
 - SR-07: MCP Protected API rejects the original user token and accepts only MCP-audience delegated tokens.
 - SR-08: Workflow logs, summaries, screenshots, HAR files, traces, KQL exports, and artifacts must not expose secrets, tokens, endpoint/account metadata, forbidden PII claims, or raw `tracestate`.
 - SR-09: Trinity acceptance is required before any live success claim.
+- SR-10: Agent-browser use is an accepted risk only for protected live E2E verification, with ephemeral browser state and no persisted cookies, tokens, storage state, usernames, raw claims, screenshots, HAR files, endpoints, or raw trace/KQL evidence in public artifacts.
 
 ## Observability
 

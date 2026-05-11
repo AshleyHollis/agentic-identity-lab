@@ -2,8 +2,8 @@
   "spec_id": "009",
   "slug": "live-azure-execution-and-evidence",
   "milestone": "M9",
-  "phase": "implement-t14-deployment-readiness-review",
-  "status": "readiness-smoke-trace-and-shutdown-complete-real-delegated-browser-smoke-blocked",
+  "phase": "spec-amendment-review-accepted-risk-agent-browser-path",
+  "status": "readiness-smoke-trace-and-shutdown-complete-real-browser-or-agent-browser-e2e-pending",
   "created": "2026-05-10",
   "updated": "2026-05-11",
   "requested_by": "Ashley Hollis",
@@ -24,7 +24,7 @@
   "impact": "High",
   "spec_gate_satisfied": true,
   "implementation_blocked": true,
-  "implementation_blocked_reason": "Real delegated-browser smoke requires protected LIVE_* smoke runtime variables and a suitable delegated test identity; readiness-based live smoke/trace is complete.",
+  "implementation_blocked_reason": "Real live browser/agent-browser delegated E2E proof is still pending. Entra MFA may be manual-only; controlled agent-browser use is accepted if protected, ephemeral, redacted, trace/log proven, leakage-checked, and followed by shutdown.",
   "artifacts": {
     "README.md": "complete",
     "goals.md": "complete",
@@ -50,13 +50,16 @@
     ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-t04-zero-mutation-rehearsal-success.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md": "complete",
-    ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md": "complete"
+    ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md": "complete",
+    ".squad\\decisions\\inbox\\morpheus-m9-real-e2e-acceptance.md": "complete",
+    ".squad\\decisions\\inbox\\morpheus-m9-accepted-risk-agent-browser-path.md": "complete"
   },
   "adrs": {
     "ADR-M9-01": "Reuse M8 protected workflow family",
     "ADR-M9-02": "Redacted evidence only",
     "ADR-M9-03": "Cost controls are closeout gates",
-    "ADR-M9-04": "Reviewer gates before live success claims"
+    "ADR-M9-04": "Reviewer gates before live success claims",
+    "ADR-M9-05": "Accepted-risk agent-browser path with manual MFA"
   },
   "task_status": {
     "T00": "complete",
@@ -68,18 +71,18 @@
     "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
     "T07": "complete-protected-live-deploy-run-25642915504-succeeded",
     "T08": "complete-runtime-config-and-telemetry-verified",
-    "T09": "blocked-real-delegated-browser-smoke-missing-live-runtime-vars-test-identity-readiness-smoke-complete-run-25644428588",
+    "T09": "pending-real-live-browser-or-agent-browser-e2e-manual-mfa-allowed-controlled-agent-browser-accepted",
     "T10": "complete-positive-kql-readiness-chain-run-25644428588-succeeded",
     "T11": "complete-negative-leakage-readiness-query-run-25644428588-succeeded",
-    "T12": "in-progress",
+    "T12": "in-progress-final-evidence-awaits-real-live-browser-or-agent-browser-e2e",
     "T13": "complete-protected-shutdown-run-25644655120-succeeded",
-    "T14": "in-progress-blocked-on-real-delegated-browser-smoke-prerequisites",
+    "T14": "in-progress-blocked-on-live-e2e-evidence-controls-and-shutdown-for-that-run",
     "T15": "pending",
-    "T16": "pending",
+    "T16": "pending-amended-acceptance-documented-blocked-on-real-live-e2e-review-gates",
     "T17": "pending"
   },
   "live_azure_gate": {
-    "status": "readiness-smoke-trace-and-cost-shutdown-complete-real-delegated-browser-smoke-blocked",
+    "status": "readiness-smoke-trace-and-cost-shutdown-complete-real-browser-or-agent-browser-e2e-pending",
     "opt_in_flag": "LIVE_AZURE_TESTS=true",
     "ci_default": false,
     "private_environment_required": true,
@@ -133,7 +136,12 @@
     "t12_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md",
     "t13_shutdown_run": "25644655120-success",
     "t13_shutdown_status": "all-aca-apps-min-replicas-0-agent-and-mcp-internal-ingress",
-    "t13_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md"
+    "t13_evidence_artifact": ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md",
+    "morpheus_m9_real_e2e_acceptance_artifact": ".squad\\decisions\\inbox\\morpheus-m9-real-e2e-acceptance.md",
+    "morpheus_m9_real_e2e_verdict": "m9-cannot-close-on-readiness-smoke-real-live-browser-or-agent-browser-delegated-e2e-still-required-manual-mfa-allowed",
+    "m9_acceptance_amendment": "manual-entra-mfa-allowed-controlled-agent-browser-accepted-risk-if-protected-ephemeral-redacted-trace-log-proven-leakage-checked-and-shutdown-verified",
+    "m9_completion_requires": "protected-live-browser-or-agent-browser-full-flow-through-apim-bff-agent-execution-mcp-real-delegated-token-positive-trace-log-proof-negative-leakage-redacted-evidence-controls-shutdown-and-review-gates",
+    "agent_browser_risk_decision_artifact": ".squad\\decisions\\inbox\\morpheus-m9-accepted-risk-agent-browser-path.md"
   },
   "external_setup_prerequisite": {
     "required_protected_environments": [
