@@ -9,6 +9,7 @@ Verdict: **PASS-WITH-CONTROLS** for M9 deploy/smoke after the guardrails in this
 - The Terraform Container App module previously placed `OBO_CLIENT_SECRET` in plain ACA environment variables. This review moves those values to ACA secret-backed env vars.
 - Terraform apply/import output can include live identifiers/endpoints. The workflow now suppresses detailed apply/import output and removes temporary live tfvars/log files.
 - The dynamically fetched Terraform storage account key is now masked before being written to the GitHub environment.
+- Failed protected run logs were inspected with redacted pattern scans. No JWT/Bearer/GitHub-token signatures were detected; client-secret-like Terraform/apply lines were treated as leakage risk and mitigated going forward by secret-backed env vars plus output suppression.
 
 ## Minimum acceptable access
 
