@@ -21,6 +21,8 @@ M8_SMOKE_TRACE_WORKFLOW = WORKFLOWS_DIR / "m8-smoke-trace.yml"
 M8_SMOKE_HARNESS = ROOT / "tools" / "ci" / "m8_browser_smoke_harness.py"
 M8_SMOKE_CONTRACT = ROOT / "tools" / "ci" / "m8_smoke_trace_contract.py"
 M9_LIVE_PREFLIGHT = ROOT / "tools" / "ci" / "m9_live_preflight.py"
+ACA_ENV_MAIN = ROOT / "infra" / "terraform" / "environments" / "single-tenant-aca" / "main.tf"
+ACA_CONTAINER_APP_MODULE = ROOT / "infra" / "terraform" / "modules" / "container-app" / "main.tf"
 
 _GUID_PATTERN = re.compile(
     r"\b([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\b",
@@ -455,6 +457,19 @@ def _scan_rbac_scope_signals() -> list[str]:
     return offenders
 
 
+def _scan_terraform_secret_handling() -> list[str]:
+    offenders: list[str] = []
+    module_text = ACA_CONTAINER_APP_MODULE.read_text(encoding="utf-8", errors="ignore").lower()
+    env_text = ACA_ENV_MAIN.read_text(encoding="utf-8", errors="ignore")
+    if "secret_env_vars" not in module_text or "secret_name" not in module_text:
+        offenders.append(f"{ACA_CONTAINER_APP_MODULE}: Container App module must support secret env vars")
+    if re.search(r"(?<!secret_)env_vars\s*=\s*\{[^}]*OBO_CLIENT_SECRET", env_text, re.DOTALL):
+        offenders.append(f"{ACA_ENV_MAIN}: OBO_CLIENT_SECRET must not be passed as a plain env var")
+    if env_text.count("secret_env_vars") < 2 or env_text.count("OBO_CLIENT_SECRET = var.") < 2:
+        offenders.append(f"{ACA_ENV_MAIN}: OBO_CLIENT_SECRET must be wired through secret_env_vars for BFF and Agent")
+    return offenders
+
+
 def run_all_checks() -> list[str]:
     offenders: list[str] = []
     offenders.extend(_scan_workflow_policies(WORKFLOWS_DIR))
@@ -462,6 +477,7 @@ def run_all_checks() -> list[str]:
     offenders.extend(_scan_frontend_placeholders())
     offenders.extend(_scan_telemetry_contract())
     offenders.extend(_scan_rbac_scope_signals())
+    offenders.extend(_scan_terraform_secret_handling())
     return offenders
 
 

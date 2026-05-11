@@ -94,9 +94,11 @@ module "container_app_bff" {
     DOWNSTREAM_TIMEOUT_SECONDS            = "10"
     OBO_TOKEN_URL                         = var.bff_obo_token_url
     OBO_CLIENT_ID                         = var.bff_obo_client_id
-    OBO_CLIENT_SECRET                     = var.bff_obo_client_secret
     OBO_REQUIRED_SCOPES                   = var.bff_obo_required_scopes
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
+  }
+  secret_env_vars = {
+    OBO_CLIENT_SECRET = var.bff_obo_client_secret
   }
   tags = var.tags
 }
@@ -123,12 +125,14 @@ module "container_app_agent_execution" {
     OBO_REQUIRED_SCOPES                   = var.agent_execution_obo_required_scopes
     OBO_TOKEN_URL                         = var.agent_execution_obo_token_url
     OBO_CLIENT_ID                         = var.agent_execution_obo_client_id
-    OBO_CLIENT_SECRET                     = var.agent_execution_obo_client_secret
     MCP_CHAIN_ENABLED                     = "true"
     MCP_PROTECTED_API_BASE_URL            = "https://${module.container_app_mcp_protected_api.fqdn}"
     MCP_AUTHORIZATION_CHECK_PATH          = "/tools/authorization-check"
     DOWNSTREAM_TIMEOUT_SECONDS            = "10"
     APPLICATIONINSIGHTS_CONNECTION_STRING = module.app_insights.connection_string
+  }
+  secret_env_vars = {
+    OBO_CLIENT_SECRET = var.agent_execution_obo_client_secret
   }
   tags = var.tags
 }

@@ -67,6 +67,13 @@ variable "env_vars" {
   default     = {}
 }
 
+variable "secret_env_vars" {
+  type        = map(string)
+  description = "Secret environment variables for the container; values are stored as Container App secrets."
+  sensitive   = true
+  default     = {}
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply when applicable."

@@ -320,6 +320,7 @@ jobs:
               --output none
           fi
           export ARM_ACCESS_KEY="$(az storage account keys list --account-name "${state_account}" --resource-group "${AZURE_RESOURCE_GROUP}" --query '[0].value' -o tsv)"
+          echo "::add-mask::${ARM_ACCESS_KEY}"
           az storage container create --name tfstate --account-name "${state_account}" --account-key "${ARM_ACCESS_KEY}" --output none
           {
             echo "TF_STATE_STORAGE_ACCOUNT=${state_account}"
@@ -333,6 +334,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
+          workdir="infra/terraform/environments/single-tenant-aca"
+          cleanup_sensitive_files() {
+            rm -f "${workdir}/live.auto.tfvars" artifacts/terraform-apply.log artifacts/terraform-apply.err
+          }
+          trap cleanup_sensitive_files EXIT
           python tools/ci/m9_entra_app_bootstrap.py \
             --environment dev \
             --output-json artifacts/m9-entra-bootstrap.json
@@ -360,7 +366,6 @@ jobs:
             exit 1
           fi
           token_url="https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token"
-          workdir="infra/terraform/environments/single-tenant-aca"
           cat > "${workdir}/live.auto.tfvars" <<EOF
           environment = "dev"
           location = "${AZURE_LOCATION}"
@@ -414,7 +419,7 @@ jobs:
             provisioning_state="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.provisioningState -o tsv)"
             if [[ "${provisioning_state}" == "Failed" || "${provisioning_state}" == "InProgress" ]]; then
               if [[ "${in_state}" == "true" ]]; then
-                terraform -chdir="${workdir}" state rm "${address}"
+                terraform -chdir="${workdir}" state rm "${address}" >/dev/null
               fi
               az containerapp delete --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --yes --output none
               continue
@@ -423,9 +428,12 @@ jobs:
               continue
             fi
             app_id="${app_id/\/providers\/Microsoft.App\/containerapps\//\/providers\/Microsoft.App\/containerApps\/}"
-            terraform -chdir="${workdir}" import -input=false "${address}" "${app_id}"
+            terraform -chdir="${workdir}" import -input=false "${address}" "${app_id}" >/dev/null
           done
-          terraform -chdir="${workdir}" apply -auto-approve -input=false -no-color
+          if ! terraform -chdir="${workdir}" apply -auto-approve -input=false -no-color >artifacts/terraform-apply.log 2>artifacts/terraform-apply.err; then
+            echo "Terraform apply failed; detailed output suppressed to avoid exposing live identifiers or protected values." >&2
+            exit 1
+          fi
           echo "Resolved live audiences and delegated scopes from Entra app registrations (values suppressed)." >> "$GITHUB_STEP_SUMMARY"
           echo "Terraform apply completed for the ACA baseline." >> "$GITHUB_STEP_SUMMARY"
 

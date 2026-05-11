@@ -42,8 +42,24 @@ resource "azurerm_container_app" "this" {
         }
       }
 
+      dynamic "env" {
+        for_each = toset(nonsensitive(keys(var.secret_env_vars)))
+        content {
+          name        = env.key
+          secret_name = lower(replace(env.key, "_", "-"))
+        }
+      }
+
       # Additional env vars (AUTH_ISSUER, AUTH_JWKS_URL, ALLOWED_AUDIENCES, etc.)
       # are injected at deploy time via tfvars and are NOT committed to this repository.
+    }
+  }
+
+  dynamic "secret" {
+    for_each = toset(nonsensitive(keys(var.secret_env_vars)))
+    content {
+      name  = lower(replace(secret.key, "_", "-"))
+      value = var.secret_env_vars[secret.key]
     }
   }
 
