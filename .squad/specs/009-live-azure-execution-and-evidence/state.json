@@ -52,7 +52,8 @@
     ".squad\\decisions\\inbox\\tank-m9-live-smoke-trace-evidence.md": "complete",
     ".squad\\decisions\\inbox\\tank-m9-cost-shutdown-evidence.md": "complete",
     ".squad\\decisions\\inbox\\morpheus-m9-real-e2e-acceptance.md": "complete",
-    ".squad\\decisions\\inbox\\morpheus-m9-accepted-risk-agent-browser-path.md": "complete"
+    ".squad\\decisions\\inbox\\morpheus-m9-accepted-risk-agent-browser-path.md": "complete",
+    ".squad\\decisions\\inbox\\copilot-m9-entra-bootstrap-probe.md": "complete"
   },
   "adrs": {
     "ADR-M9-01": "Reuse M8 protected workflow family",
@@ -71,12 +72,12 @@
     "T06": "complete-protected-smoke-trace-contract-only-rehearsal-succeeded",
     "T07": "complete-protected-live-deploy-run-25642915504-succeeded",
     "T08": "complete-runtime-config-and-telemetry-verified",
-    "T09": "pending-real-live-browser-or-agent-browser-e2e-manual-mfa-allowed-controlled-agent-browser-accepted",
+    "T09": "blocked-graph-app-registration-permission-and-protected-obo-credentials-required-before-real-live-browser-or-agent-browser-e2e",
     "T10": "complete-positive-kql-readiness-chain-run-25644428588-succeeded",
     "T11": "complete-negative-leakage-readiness-query-run-25644428588-succeeded",
     "T12": "in-progress-final-evidence-awaits-real-live-browser-or-agent-browser-e2e",
     "T13": "complete-protected-shutdown-run-25644655120-succeeded",
-    "T14": "in-progress-blocked-on-live-e2e-evidence-controls-and-shutdown-for-that-run",
+    "T14": "in-progress-blocked-on-graph-app-registration-permission-obo-credentials-live-e2e-evidence-controls-and-shutdown-for-that-run",
     "T15": "pending",
     "T16": "pending-amended-acceptance-documented-blocked-on-real-live-e2e-review-gates",
     "T17": "pending"
@@ -128,8 +129,8 @@
     "t07_live_deploy_scope": "image-publish-terraform-apply-aca-image-rollout",
     "t07_aca_rollout_status": "all-container-apps-succeeded-running-target-port-8000",
     "t08_runtime_verification_status": "complete-strict-auth-appinsights-private-acr-target-port-8000-and-aca-running-state-verified",
-    "t09_live_smoke_run": "blocked-for-real-delegated-browser-smoke-readiness-smoke-run-25644428588-success",
-    "t09_blockers": "missing LIVE_AGENT_EXECUTION_AUDIENCE, LIVE_APIM_BASE_URL, LIVE_AUTHORITY_HOST, LIVE_BFF_AUDIENCE, LIVE_MCP_AUDIENCE, LIVE_READINESS_URL, LIVE_SMOKE_CLIENT_ID, LIVE_SMOKE_SCOPES plus suitable delegated test identity",
+    "t09_live_smoke_run": "blocked-for-real-delegated-browser-smoke-readiness-smoke-run-25644428588-success-protected-deploy-probe-25648744951-failed-at-entra-bootstrap",
+    "t09_blockers": "protected deploy identity lacks Microsoft Graph app-registration permission for live Entra API audience bootstrap; protected BFF and Agent Execution OBO client credentials are still required; real browser/agent-browser smoke and trace proof are pending",
     "t10_positive_kql_chain": "25644428588-success-bff-agent-execution-mcp-roles-observed-from-readiness-generated-traces",
     "t11_negative_leakage": "25644428588-success-zero-forbidden-token-or-pii-hits-for-readiness-generated-telemetry",
     "t09_t11_cleanup_status": "agent-execution-and-mcp-restored-to-internal-ingress-and-min-replicas-0",
