@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "status": 200,
+  "sessionIdPresent": true,
+  "expiresAtPresent": true,
+  "resultSource": "manual-browser-artifact",
+  "targetUrlDigest": "replace-with-redacted-digest"
+}

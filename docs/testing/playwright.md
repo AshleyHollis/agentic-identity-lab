@@ -19,3 +19,11 @@ Use Playwright only for **UI flows** that do not expose tokens. Ashley has accep
 - Harnesses never call `storageState()` or upload browser profiles.
 - Logs and artifacts contain only sanitized pass/fail evidence.
 - Azure OpenAI / Foundry service authentication remains separate from MCP delegated user access.
+
+## Manual artifact transport (redacted)
+Use this when MFA/manual browser interaction is required and direct Playwright token automation is not available.
+
+1. Run the manual browser/session check outside CI.
+2. Capture only boolean/status evidence into `docs/testing/m9-browser-manual-evidence-template.json` shape.
+3. Ensure values contain no token, cookie, endpoint, tenant, claim, username, or raw trace data.
+4. Point `M9_BROWSER_EVIDENCE_JSON` to the redacted JSON and use `M9_BROWSER_TRANSPORT=manual-artifact`.

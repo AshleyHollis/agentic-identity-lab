@@ -9,15 +9,15 @@
 | T04 | Zero-mutation deploy rehearsal | Tank | T02, T03 | ✅ Complete (protected OIDC contract and deploy-live dry-run passed with mutation flags disabled and `live_azure_tests=false`) |
 | T05 | Lifecycle readiness rehearsal | Tank | T02, T03, T04 | ✅ Complete (protected start/resume and nightly shutdown dry-runs passed) |
 | T06 | Live smoke contract rehearsal | Neo / Mouse | T03, T04 | ✅ Complete (protected smoke/trace contract-only rehearsal passed; live check job skipped) |
-| T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `25642915504` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
-| T08 | Runtime configuration verification | Tank / Neo | T07 | ✅ Complete (ACA/APIM runtime posture verified; strict auth/App Insights/runtime ports confirmed; run `25644428588` also verified live runtime telemetry) |
-| T09 | Browser / agent-browser smoke execution | Mouse / Neo | T08 | Blocked pending real live delegated E2E run; protected deploy probe `25648744951` confirmed the deploy identity lacks Graph app-registration permissions needed for Entra API audience bootstrap, and OBO client credentials are still required |
-| T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete for readiness-generated live traces (protected Azure Monitor KQL verification in run `25644428588` observed BFF, Agent Execution, and MCP roles) |
-| T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete for readiness-generated live telemetry (protected run `25644428588` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
-| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress (readiness evidence exists; final package must add the live browser/agent-browser E2E proof without IDs, endpoints, tokens, cookies, usernames, raw claims, screenshots, HAR, raw traces, or raw KQL rows) |
-| T13 | Cost-control shutdown verification | Tank | T09 | ✅ Complete (protected shutdown run `25644655120`; all ACA apps min replicas restored to 0) |
-| T14 | Deployment readiness review | Tank | T01-T08, T13 | In progress / blocked on Graph app-registration permission for live Entra bootstrap, protected OBO credential setup, live browser/agent-browser E2E evidence, and shutdown verification for that run; not blocked on automating Entra MFA |
-| T15 | Security/evidence review | Trinity | T03, T11, T12 | Pending |
+| T07 | Approved first live mutation window | Tank | T04-T06, user approval | ✅ Complete (protected run `redacted-live-deploy-run` passed image publish, Terraform apply, and ACA image rollout with live mutation approval) |
+| T08 | Runtime configuration verification | Tank / Neo | T07 | ✅ Complete (ACA/APIM runtime posture verified; strict auth/App Insights/runtime ports confirmed; run `redacted-readiness-smoke-run` also verified live runtime telemetry) |
+| T09 | Browser / agent-browser smoke execution | Mouse / Neo | T08 | Blocked / waiting: protected deploy and smoke dispatches are at environment approval; they must still prove Graph/bootstrap permission, protected OBO credentials, and real delegated browser/agent-browser E2E |
+| T10 | Positive KQL chain verification | Neo | T09 | ✅ Complete for readiness-generated live traces (protected Azure Monitor KQL verification in run `redacted-readiness-smoke-run` observed BFF, Agent Execution, and MCP roles) |
+| T11 | Negative leakage verification | Trinity / Neo | T09 | ✅ Complete for readiness-generated live telemetry (protected run `redacted-readiness-smoke-run` hard-failed on leakage rows and passed with zero forbidden token/PII hits) |
+| T12 | Redacted evidence package | Morpheus / Trinity | T10, T11 | In progress (readiness evidence exists; public-safe manual artifact template is ready; final package must add the live browser/agent-browser E2E proof without IDs, endpoints, tokens, cookies, usernames, raw claims, screenshots, HAR, raw traces, or raw KQL rows) |
+| T13 | Cost-control shutdown verification | Tank | T09 | ✅ Complete (protected shutdown run `redacted-shutdown-run`; all ACA apps min replicas restored to 0) |
+| T14 | Deployment readiness review | Tank | T01-T08, T13 | In progress / blocked on protected environment approval for the current deploy/smoke dispatches, then Graph/bootstrap proof, protected OBO credential setup, live browser/agent-browser E2E evidence, and shutdown verification for that run; not blocked on automating Entra MFA |
+| T15 | Security/evidence review | Trinity | T03, T11, T12 | In progress (elevated-access/secret-handling review passed with controls; final E2E evidence review remains pending) |
 | T16 | Architecture closeout review | Morpheus | T12-T15 | Pending (acceptance bar amended: manual MFA is allowed; controlled agent-browser is accepted; blocked until real live E2E evidence + reviewer gates) |
 | T17 | Final M9 closeout | Morpheus | T16 | Pending |
 

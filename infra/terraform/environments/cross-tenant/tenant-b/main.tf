@@ -25,10 +25,20 @@ module "container_apps_env" {
   tags                = var.tags
 }
 
-module "container_app" {
-  source              = "../../../modules/container-app"
-  name                = "${local.name_prefix}-app"
+module "managed_identity" {
+  source              = "../../../modules/managed-identity"
+  name                = "${local.name_prefix}-app-mi"
   resource_group_name = var.resource_group_name
   location            = var.location
   tags                = var.tags
+}
+
+module "container_app" {
+  source                        = "../../../modules/container-app"
+  name                          = "${local.name_prefix}-app"
+  resource_group_name           = var.resource_group_name
+  location                      = var.location
+  container_apps_environment_id = module.container_apps_env.environment_id
+  managed_identity_id           = module.managed_identity.identity_id
+  tags                          = var.tags
 }

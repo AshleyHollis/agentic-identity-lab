@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -8,6 +9,7 @@ sys.path.insert(0, str(ROOT))
 
 from tools.ci.m8_browser_smoke_harness import validate_browser_smoke_wiring  # noqa: E402
 from tools.ci.m8_browser_smoke_harness import run_live_playwright_smoke  # noqa: E402
+from tools.ci.m8_browser_smoke_harness import run_live_manual_artifact_smoke  # noqa: E402
 from tools.ci.m8_smoke_trace_contract import (  # noqa: E402
     evaluate_trace_results,
     validate_smoke_trace_scaffold,
@@ -68,6 +70,32 @@ def test_m8_browser_smoke_harness_manual_artifact_contract_accepts_path() -> Non
         },
     )
     assert offenders == []
+
+
+def test_m8_manual_artifact_template_is_public_safe() -> None:
+    template_path = ROOT / "docs" / "testing" / "m9-browser-manual-evidence-template.json"
+    payload = json.loads(template_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(payload).lower()
+    for forbidden_hint in (
+        "authorization",
+        "token",
+        "cookie",
+        "http://",
+        "https://",
+        "tenant",
+        "client_id",
+        "endpoint",
+        "claims",
+    ):
+        assert forbidden_hint not in serialized
+    evidence, offenders = run_live_manual_artifact_smoke(
+        {
+            "M9_BROWSER_EVIDENCE_JSON": str(template_path),
+            "M9_PLAYWRIGHT_EXPECTED_STATUS": "200",
+        }
+    )
+    assert offenders == []
+    assert evidence["transport"] == "manual-artifact"
 
 
 def test_m8_browser_smoke_harness_agent_browser_contract_requires_command() -> None:
