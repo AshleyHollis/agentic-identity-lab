@@ -1,9 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChatSession } from './bffClient';
 
 describe('createChatSession', () => {
+  beforeEach(() => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: <T extends Uint8Array>(array: T): T => {
+        array.fill(7);
+        return array;
+      }
+    });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('sends Authorization bearer token and traceparent headers to the BFF', async () => {
