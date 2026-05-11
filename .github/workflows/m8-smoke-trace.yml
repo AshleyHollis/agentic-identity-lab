@@ -243,5 +243,6 @@ jobs:
               --name "${app}" \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
               --min-replicas 0 \
-              --only-show-errors >/dev/null
+              --only-show-errors >/dev/null || true
           done
+          true
