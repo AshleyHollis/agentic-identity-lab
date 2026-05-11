@@ -196,13 +196,18 @@ jobs:
               --resource-group "${AZURE_RESOURCE_GROUP}" \
               --min-replicas 1 \
               --only-show-errors >/dev/null
+            az containerapp ingress enable \
+              --name "${app}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --type external \
+              --target-port 8000 \
+              --transport auto \
+              --only-show-errors >/dev/null
           done
           sleep 45
           for app in agent-identity-lab-dev-agent agent-identity-lab-dev-mcp; do
-            az containerapp exec \
-              --name "${app}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --command "python -c __import__('urllib.request').request.urlopen('http://127.0.0.1:8000/readyz').close()"
+            app_fqdn="$(az containerapp show --name "${app}" --resource-group "${AZURE_RESOURCE_GROUP}" --query properties.configuration.ingress.fqdn -o tsv)"
+            python -c 'import sys, urllib.request; r = urllib.request.urlopen(f"https://{sys.argv[1]}/readyz", timeout=30); r.close(); raise SystemExit(0 if r.status == 200 else 1)' "${app_fqdn}"
           done
           python tools/ci/m8_browser_smoke_harness.py --mode live --output-json m8-browser-smoke-live.json
 
@@ -239,6 +244,13 @@ jobs:
         run: |
           set +e
           for app in agent-identity-lab-dev-agent agent-identity-lab-dev-mcp; do
+            az containerapp ingress enable \
+              --name "${app}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --type internal \
+              --target-port 8000 \
+              --transport auto \
+              --only-show-errors >/dev/null || true
             az containerapp update \
               --name "${app}" \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
