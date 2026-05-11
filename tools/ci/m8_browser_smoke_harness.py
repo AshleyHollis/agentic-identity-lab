@@ -21,7 +21,8 @@ def _forbid_tokens(source: str, path: Path, tokens: tuple[str, ...], offenders: 
             offenders.append(f"{path}: forbidden token '{token}' detected")
 
 
-_PLAYWRIGHT_REQUIRED_ENV = ("M9_PLAYWRIGHT_CHAT_URL", "M9_PLAYWRIGHT_ACCESS_TOKEN")
+_CHAT_URL_REQUIRED_ENV = ("M9_PLAYWRIGHT_CHAT_URL",)
+_PLAYWRIGHT_TOKEN_REQUIRED_ENV = ("M9_PLAYWRIGHT_ACCESS_TOKEN",)
 _MANUAL_REQUIRED_ENV = ("M9_BROWSER_EVIDENCE_JSON",)
 _ALLOWED_TRANSPORTS = ("playwright", "agent-browser", "manual-artifact")
 _PLACEHOLDER_HINTS = ("placeholder", "{", "}", "<", ">", "changeme")
@@ -186,7 +187,11 @@ def validate_live_inputs(
         return offenders
 
     if transport in ("playwright", "agent-browser"):
-        for name in _PLAYWRIGHT_REQUIRED_ENV:
+        for name in _CHAT_URL_REQUIRED_ENV:
+            _check_required_protected_input(env, name, offenders)
+
+    if transport == "playwright":
+        for name in _PLAYWRIGHT_TOKEN_REQUIRED_ENV:
             _check_required_protected_input(env, name, offenders)
 
     if transport == "manual-artifact":

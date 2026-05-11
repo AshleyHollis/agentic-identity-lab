@@ -181,6 +181,7 @@ jobs:
       M9_PLAYWRIGHT_CHAT_URL: ${{ secrets.M9_PLAYWRIGHT_CHAT_URL }}
       M9_PLAYWRIGHT_ACCESS_TOKEN: ${{ secrets.M9_PLAYWRIGHT_ACCESS_TOKEN }}
       M9_AGENT_BROWSER_COMMAND: ${{ secrets.M9_AGENT_BROWSER_COMMAND }}
+      LIVE_SMOKE_SCOPES: ${{ vars.LIVE_SMOKE_SCOPES }}
       M9_BROWSER_EVIDENCE_JSON: ${{ inputs.browser_evidence_json || vars.M9_BROWSER_EVIDENCE_JSON }}
       M9_AGENT_BROWSER_TIMEOUT_SECONDS: ${{ vars.M9_AGENT_BROWSER_TIMEOUT_SECONDS }}
       M9_PLAYWRIGHT_EXPECTED_STATUS: ${{ vars.M9_PLAYWRIGHT_EXPECTED_STATUS }}
@@ -206,7 +207,7 @@ jobs:
           if [[ "${browser_transport}" == "playwright" ]]; then
             python tools/ci/m9_live_preflight.py \
               --context smoke-identity \
-              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN
+              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN LIVE_SMOKE_SCOPES
           elif [[ "${browser_transport}" == "manual-artifact" ]]; then
             python tools/ci/m9_live_preflight.py \
               --context smoke-manual-evidence \
@@ -214,7 +215,7 @@ jobs:
           elif [[ "${browser_transport}" == "agent-browser" ]]; then
             python tools/ci/m9_live_preflight.py \
               --context smoke-identity \
-              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_PLAYWRIGHT_ACCESS_TOKEN M9_AGENT_BROWSER_COMMAND
+              --require AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID M9_PLAYWRIGHT_CHAT_URL M9_AGENT_BROWSER_COMMAND LIVE_SMOKE_SCOPES
           else
             echo "Unsupported browser transport: ${browser_transport}"
             exit 1

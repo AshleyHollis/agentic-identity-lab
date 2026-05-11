@@ -268,6 +268,8 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      LIVE_BFF_OBO_CLIENT_SECRET: ${{ secrets.LIVE_BFF_OBO_CLIENT_SECRET }}
+      LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET: ${{ secrets.LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET }}
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEPLOY }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -330,6 +332,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p artifacts
+          python tools/ci/m9_entra_app_bootstrap.py \
+            --environment dev \
+            --output-json artifacts/m9-entra-bootstrap.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path("artifacts/m9-entra-bootstrap.json").read_text(encoding="utf-8"))
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as env_file:
+              env_file.write(f"BFF_AUDIENCE={data['bff_audience']}\n")
+              env_file.write(f"AGENT_EXECUTION_AUDIENCE={data['agent_execution_audience']}\n")
+              env_file.write(f"MCP_AUDIENCE={data['mcp_audience']}\n")
+              env_file.write(f"BLUEPRINT_AUDIENCE={data['blueprint_audience']}\n")
+              env_file.write(f"BFF_SCOPE_MCP_ACCESS={data['bff_scope_mcp_access']}\n")
+              env_file.write(f"AGENT_SCOPE_MCP_ACCESS={data['agent_execution_scope_mcp_access']}\n")
+              env_file.write(f"AGENT_SCOPE_MCP_WRITE={data['agent_execution_scope_mcp_write']}\n")
+              env_file.write(f"MCP_SCOPE_MCP_ACCESS={data['mcp_scope_mcp_access']}\n")
+              env_file.write(f"MCP_SCOPE_MCP_WRITE={data['mcp_scope_mcp_write']}\n")
+              env_file.write(f"BFF_OBO_CLIENT_ID={data['bff_client_id']}\n")
+              env_file.write(f"AGENT_OBO_CLIENT_ID={data['agent_execution_client_id']}\n")
+          PY
+          if [[ -z "${LIVE_BFF_OBO_CLIENT_SECRET}" || -z "${LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET}" ]]; then
+            echo "Missing required protected OBO client secret(s) in lab-live-azure-deploy." >&2
+            exit 1
+          fi
+          token_url="https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token"
           workdir="infra/terraform/environments/single-tenant-aca"
           cat > "${workdir}/live.auto.tfvars" <<EOF
           environment = "dev"
@@ -347,10 +377,18 @@ jobs:
           auth_issuer = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0"
           auth_jwks_url = "https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys"
           trusted_tenants = "${AZURE_TENANT_ID}"
-          bff_allowed_audiences = "api://agent-identity-lab-dev-bff"
-          agent_execution_allowed_audiences = "api://agent-identity-lab-dev-agent-execution"
-          mcp_allowed_audiences = "api://agent-identity-lab-dev-mcp"
-          blueprint_audience = "api://agent-identity-lab-dev-bff"
+          bff_allowed_audiences = "${BFF_AUDIENCE}"
+          agent_execution_allowed_audiences = "${AGENT_EXECUTION_AUDIENCE}"
+          mcp_allowed_audiences = "${MCP_AUDIENCE}"
+          blueprint_audience = "${BLUEPRINT_AUDIENCE}"
+          bff_obo_token_url = "${token_url}"
+          bff_obo_client_id = "${BFF_OBO_CLIENT_ID}"
+          bff_obo_client_secret = "${LIVE_BFF_OBO_CLIENT_SECRET}"
+          bff_obo_required_scopes = "${AGENT_SCOPE_MCP_ACCESS} ${AGENT_SCOPE_MCP_WRITE}"
+          agent_execution_obo_token_url = "${token_url}"
+          agent_execution_obo_client_id = "${AGENT_OBO_CLIENT_ID}"
+          agent_execution_obo_client_secret = "${LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET}"
+          agent_execution_obo_required_scopes = "${MCP_SCOPE_MCP_ACCESS} ${MCP_SCOPE_MCP_WRITE}"
           EOF
           terraform -chdir="${workdir}" init \
             -input=false \
@@ -388,6 +426,7 @@ jobs:
             terraform -chdir="${workdir}" import -input=false "${address}" "${app_id}"
           done
           terraform -chdir="${workdir}" apply -auto-approve -input=false -no-color
+          echo "Resolved live audiences and delegated scopes from Entra app registrations (values suppressed)." >> "$GITHUB_STEP_SUMMARY"
           echo "Terraform apply completed for the ACA baseline." >> "$GITHUB_STEP_SUMMARY"
 
   config-rollout:
@@ -490,7 +529,8 @@ jobs:
               exit 1
             fi
             app_id="$(az containerapp show --name "${app_name}" --resource-group "${AZURE_RESOURCE_GROUP}" --query id -o tsv)"
-            patch_file="$(mktemp)"
+            mkdir -p artifacts
+            patch_file="artifacts/${app_name}-patch.json"
             python - "$app_name" "${AZURE_RESOURCE_GROUP}" "${app_to_image[$app_name]}" "${login_server}" "${identity_id}" "$patch_file" <<'PY'
           import json
           import subprocess

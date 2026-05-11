@@ -95,6 +95,7 @@ _CONTRACT_PROFILES: dict[str, ContractProfile] = {
             "lab-live-azure-smoke": (
                 "AZURE_RESOURCE_GROUP",
                 "M9_BROWSER_TRANSPORT",
+                "LIVE_SMOKE_SCOPES",
             ),
         },
         optional_variables={

@@ -114,8 +114,10 @@ Secrets:
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
 - `M9_PLAYWRIGHT_CHAT_URL` (required for `playwright` and `agent-browser` transports)
-- `M9_PLAYWRIGHT_ACCESS_TOKEN` (required for `playwright` and `agent-browser` transports)
+- `M9_PLAYWRIGHT_ACCESS_TOKEN` (required for `playwright`; optional for `agent-browser` and `manual-artifact`)
 - `M9_AGENT_BROWSER_COMMAND` (required for `agent-browser` transport)
+- `LIVE_BFF_OBO_CLIENT_SECRET` (BFF confidential client secret for OBO to Agent Execution Service)
+- `LIVE_AGENT_EXECUTION_OBO_CLIENT_SECRET` (Agent Execution Service confidential client secret for OBO to MCP)
 - `APPLICATIONINSIGHTS_CONNECTION_STRING` (or approved managed identity equivalent)
 - `APIM_SUBSCRIPTION_KEY` (only if route requires it)
 
@@ -169,6 +171,20 @@ Lifecycle identity scope must remain stop/start/scale only (no deploy/apply/dest
    - `run_app_rollout=false`
    - `execute_live_mutations=false`
    - `live_azure_tests=false`
+
+### 5) Strict delegated Entra bootstrap + consent (run in protected deploy boundary)
+
+- `m8-deploy-live.yml` now runs `tools/ci/m9_entra_app_bootstrap.py` before Terraform apply.
+- The bootstrap idempotently ensures app registrations/scopes for:
+  - BFF resource API
+  - Agent Execution Service resource API
+  - MCP resource API
+  - Smoke public client app
+- It writes real `api://<client-id>` audiences/scopes into `live.auto.tfvars` and pre-authorizes:
+  - smoke client -> BFF scope
+  - BFF -> Agent delegated scopes
+  - Agent -> MCP delegated scopes
+- Admin consent must be granted for required delegated permissions in the tenant (once per tenant).
 
 ## Safe next action to reach first live E2E
 

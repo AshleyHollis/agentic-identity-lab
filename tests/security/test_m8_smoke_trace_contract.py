@@ -75,10 +75,10 @@ def test_m8_browser_smoke_harness_agent_browser_contract_requires_command() -> N
         env={
             "M9_BROWSER_TRANSPORT": "agent-browser",
             "M9_PLAYWRIGHT_CHAT_URL": "https://contoso.example.com/chat/session",
-            "M9_PLAYWRIGHT_ACCESS_TOKEN": "redacted-protected-token",
         },
     )
     assert any("M9_AGENT_BROWSER_COMMAND" in offender for offender in offenders)
+    assert all("M9_PLAYWRIGHT_ACCESS_TOKEN" not in offender for offender in offenders)
 
 
 def test_m8_browser_smoke_harness_does_not_emit_trace_or_token_artifacts(monkeypatch) -> None:

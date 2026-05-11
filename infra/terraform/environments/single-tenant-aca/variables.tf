@@ -118,6 +118,56 @@ variable "blueprint_audience" {
   default     = "api://agent-identity-lab-dev-bff"
 }
 
+variable "bff_obo_token_url" {
+  type        = string
+  description = "OAuth2 token endpoint for BFF OBO exchange to Agent Execution Service."
+  default     = ""
+}
+
+variable "bff_obo_client_id" {
+  type        = string
+  description = "Confidential client ID used by BFF for OBO exchange."
+  default     = ""
+}
+
+variable "bff_obo_client_secret" {
+  type        = string
+  description = "Confidential client secret used by BFF for OBO exchange."
+  sensitive   = true
+  default     = ""
+}
+
+variable "bff_obo_required_scopes" {
+  type        = string
+  description = "Space-delimited downstream delegated scopes BFF requests from Agent Execution Service."
+  default     = ""
+}
+
+variable "agent_execution_obo_token_url" {
+  type        = string
+  description = "OAuth2 token endpoint for Agent Execution Service OBO exchange to MCP."
+  default     = ""
+}
+
+variable "agent_execution_obo_client_id" {
+  type        = string
+  description = "Confidential client ID used by Agent Execution Service for OBO exchange."
+  default     = ""
+}
+
+variable "agent_execution_obo_client_secret" {
+  type        = string
+  description = "Confidential client secret used by Agent Execution Service for OBO exchange."
+  sensitive   = true
+  default     = ""
+}
+
+variable "agent_execution_obo_required_scopes" {
+  type        = string
+  description = "Space-delimited downstream delegated scopes Agent Execution Service requests from MCP."
+  default     = ""
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to all resources."
