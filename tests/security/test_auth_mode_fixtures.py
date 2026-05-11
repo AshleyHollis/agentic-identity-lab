@@ -14,9 +14,11 @@ from identity_lab_auth.auth_settings import (  # noqa: E402
     AUTH_FIXTURE_HEADER,
     AUTH_MODE_ENV,
     AuthMode,
+    extract_bearer_token,
     load_auth_claims,
     load_auth_settings,
     load_fixture_claims,
+    load_strict_claims_from_authorization,
 )
 
 FIXTURES_DIR = ROOT / "tests" / "fixtures" / "sample-claims"
@@ -53,3 +55,22 @@ def test_auth_mode_behavior() -> None:
     strict_settings = load_auth_settings(env={AUTH_MODE_ENV: "strict"})
     with pytest.raises(NotImplementedError):
         load_auth_claims(strict_settings, FIXTURES_DIR)
+
+
+def test_extract_bearer_token_requires_bearer_scheme() -> None:
+    assert extract_bearer_token("Bearer placeholder-token") == "placeholder-token"
+    assert extract_bearer_token("bearer placeholder-token") == "placeholder-token"
+    assert extract_bearer_token("Basic placeholder-token") is None
+    assert extract_bearer_token(None) is None
+
+
+def test_strict_claim_loader_does_not_return_claims_without_bearer() -> None:
+    assert (
+        load_strict_claims_from_authorization(
+            None,
+            jwks_url="https://login.microsoftonline.com/common/discovery/v2.0/keys",
+            allowed_audiences=["api://placeholder"],
+            issuer="https://login.microsoftonline.com/common/v2.0",
+        )
+        is None
+    )

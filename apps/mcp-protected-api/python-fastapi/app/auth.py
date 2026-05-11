@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 from fastapi import Depends, Header, HTTPException, Request, status
 
 from identity_lab_auth import (
@@ -8,6 +10,7 @@ from identity_lab_auth import (
     classify_claims_token_type,
     load_auth_claims,
     load_auth_settings,
+    load_strict_claims_from_authorization,
     require_audience,
     require_delegated_token,
     require_scope,
@@ -22,6 +25,18 @@ settings = load_settings()
 ACCESS_SCOPE = "mcp.access"
 WRITE_SCOPE = "mcp.write"
 
+
+def _header_value(headers: Mapping[str, str], name: str) -> str | None:
+    direct = headers.get(name)
+    if direct is not None:
+        return direct
+    lowered = name.lower()
+    for key, value in headers.items():
+        if key.lower() == lowered:
+            return value
+    return None
+
+
 def _resolve_required_scopes(scope: str) -> list[str]:
     if not settings.required_scopes:
         return [scope]
@@ -32,7 +47,21 @@ def _resolve_required_scopes(scope: str) -> list[str]:
 
 def _build_auth_context(request: Request) -> AuthContext:
     auth_settings = load_auth_settings(headers=request.headers)
-    claims = load_auth_claims(auth_settings)
+    if auth_settings.mode == AuthMode.STRICT:
+        try:
+            claims = load_strict_claims_from_authorization(
+                _header_value(request.headers, "authorization"),
+                jwks_url=settings.auth_jwks_url,
+                allowed_audiences=settings.allowed_audiences,
+                issuer=settings.auth_issuer,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid_token",
+            ) from exc
+    else:
+        claims = load_auth_claims(auth_settings)
     correlation_id = get_correlation_id(request.headers)
     if claims is None:
         return AuthContext.from_claims(

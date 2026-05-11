@@ -20,6 +20,9 @@ from identity_lab_auth.claims import SAFE_CLAIM_KEYS  # noqa: E402
 
 ISSUER = "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000001/v2.0"
 TRUSTED_TENANTS = "00000000-0000-0000-0000-000000000001"
+STRICT_ISSUER = "https://login.microsoftonline.com/tenant-placeholder-for-tests/v2.0"
+STRICT_TENANT = "tenant-placeholder-for-tests"
+STRICT_AUDIENCE = "api://bff-test-audience"
 
 
 def _load_bff_auth():
@@ -133,3 +136,51 @@ def test_bff_rejects_app_only(monkeypatch: pytest.MonkeyPatch) -> None:
         auth.get_auth_context(request)
 
     assert excinfo.value.status_code == 403
+
+
+def test_bff_strict_mode_uses_authorization_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "strict")
+    monkeypatch.setenv("AUTH_ISSUER", STRICT_ISSUER)
+    monkeypatch.setenv("AUTH_JWKS_URL", "https://login.microsoftonline.com/common/discovery/v2.0/keys")
+    monkeypatch.setenv("TRUSTED_TENANTS", STRICT_TENANT)
+    monkeypatch.setenv("ALLOWED_AUDIENCES", STRICT_AUDIENCE)
+    monkeypatch.setenv("REQUIRED_SCOPES", "mcp.access")
+
+    auth = _load_bff_auth()
+
+    def _strict_claims(authorization: str | None, **_: object) -> dict[str, object] | None:
+        assert authorization == "Bearer placeholder-token"
+        return {
+            "iss": STRICT_ISSUER,
+            "tid": STRICT_TENANT,
+            "aud": STRICT_AUDIENCE,
+            "scp": "mcp.access",
+            "exp": 4_102_444_800,
+            "nbf": 1,
+        }
+
+    monkeypatch.setattr(auth, "load_strict_claims_from_authorization", _strict_claims)
+    request = _make_request({"Authorization": "Bearer placeholder-token"})
+
+    context = auth.get_auth_context(request, authorization="Bearer placeholder-token")
+
+    assert context.authenticated
+    assert context.authorized
+    assert context.token_type == "delegated"
+
+
+def test_bff_strict_mode_rejects_missing_authorization(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "strict")
+    monkeypatch.setenv("AUTH_ISSUER", STRICT_ISSUER)
+    monkeypatch.setenv("AUTH_JWKS_URL", "https://login.microsoftonline.com/common/discovery/v2.0/keys")
+    monkeypatch.setenv("TRUSTED_TENANTS", STRICT_TENANT)
+    monkeypatch.setenv("ALLOWED_AUDIENCES", STRICT_AUDIENCE)
+    monkeypatch.setenv("REQUIRED_SCOPES", "mcp.access")
+
+    auth = _load_bff_auth()
+    request = _make_request({})
+
+    with pytest.raises(HTTPException) as excinfo:
+        auth.get_auth_context(request, authorization=None)
+
+    assert excinfo.value.status_code == 401

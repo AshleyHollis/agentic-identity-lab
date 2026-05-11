@@ -70,7 +70,10 @@ _UNSAFE_ARTIFACT_PATTERNS = [
     re.compile(r"\.har(\b|$)", re.IGNORECASE),
     re.compile(r"\.trace(\b|$)", re.IGNORECASE),
     re.compile(r"\.log(\b|$)", re.IGNORECASE),
-    re.compile(r"\b(jwt|cookie|secret|screenshot|video)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(jwt|cookie|cookies|secret|screenshot|video|storage-state|storage_state|auth-state|auth_state)\b",
+        re.IGNORECASE,
+    ),
 ]
 _AZ_ACCOUNT_SHOW_PATTERN = re.compile(r"\baz\s+account\s+show\b", re.IGNORECASE)
 _AZ_ACCOUNT_SHOW_SAFE_OUTPUT_PATTERN = re.compile(

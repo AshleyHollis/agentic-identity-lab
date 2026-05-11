@@ -16,6 +16,7 @@ from .auth_settings import (
     load_auth_mode,
     load_auth_settings,
     load_fixture_claims,
+    load_strict_claims_from_authorization,
     select_fixture_name,
     validate_strict_config,
 )
@@ -72,6 +73,7 @@ __all__ = [
     "load_auth_mode",
     "load_auth_settings",
     "load_fixture_claims",
+    "load_strict_claims_from_authorization",
     "load_safe_claims_allowlist",
     "require_audience",
     "require_delegated_token",

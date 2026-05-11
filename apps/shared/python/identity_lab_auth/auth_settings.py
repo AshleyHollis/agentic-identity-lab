@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
+
+from .jwks import JwksCache, validate_strict
 
 AUTH_MODE_ENV = "AUTH_MODE"
 AUTH_FIXTURE_ENV = "AUTH_FIXTURE"
@@ -49,6 +52,42 @@ def _normalize(value: str | None) -> str | None:
         return None
     trimmed = value.strip()
     return trimmed or None
+
+
+def extract_bearer_token(authorization: str | None) -> str | None:
+    value = _normalize(authorization)
+    if value is None:
+        return None
+    scheme, separator, token = value.partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    return _normalize(token)
+
+
+@lru_cache(maxsize=8)
+def _strict_jwks_cache(jwks_url: str) -> JwksCache:
+    return JwksCache(jwks_url=jwks_url)
+
+
+def load_strict_claims_from_authorization(
+    authorization: str | None,
+    *,
+    jwks_url: str,
+    allowed_audiences: list[str],
+    issuer: str | None = None,
+) -> dict[str, Any] | None:
+    token = extract_bearer_token(authorization)
+    if token is None:
+        return None
+    try:
+        return validate_strict(
+            token,
+            _strict_jwks_cache(jwks_url),
+            allowed_audiences=allowed_audiences,
+            issuer=issuer,
+        )
+    except Exception as exc:
+        raise ValueError("strict_token_validation_failed") from exc
 
 
 def _get_header_value(headers: Mapping[str, str] | None, header_name: str) -> str | None:

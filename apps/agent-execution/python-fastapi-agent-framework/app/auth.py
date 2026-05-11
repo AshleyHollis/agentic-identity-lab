@@ -12,6 +12,7 @@ from identity_lab_auth import (
     exchange_on_behalf_of,
     load_auth_claims,
     load_auth_settings,
+    load_strict_claims_from_authorization,
     require_audience,
     require_delegated_token,
     require_scope,
@@ -62,6 +63,17 @@ def _status_for_failures(failures: Iterable[str]) -> int:
     return status.HTTP_403_FORBIDDEN
 
 
+def _header_value(headers: Mapping[str, str], name: str) -> str | None:
+    direct = headers.get(name)
+    if direct is not None:
+        return direct
+    lowered = name.lower()
+    for key, value in headers.items():
+        if key.lower() == lowered:
+            return value
+    return None
+
+
 def resolve_auth_context(headers: Mapping[str, str]) -> AuthContext:
     settings = load_settings()
     correlation_id = get_correlation_id(headers, settings.correlation_header)
@@ -74,13 +86,21 @@ def resolve_auth_context(headers: Mapping[str, str]) -> AuthContext:
             authorized=True,
             correlation_id=correlation_id,
         )
-    try:
+    if auth_settings.mode == AuthMode.STRICT:
+        try:
+            claims = load_strict_claims_from_authorization(
+                _header_value(headers, "authorization"),
+                jwks_url=settings.auth_jwks_url,
+                allowed_audiences=settings.allowed_audiences,
+                issuer=settings.auth_issuer,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid_token",
+            ) from exc
+    else:
         claims = load_auth_claims(auth_settings)
-    except NotImplementedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Strict auth mode is not implemented.",
-        ) from exc
     if not claims:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

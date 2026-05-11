@@ -8,6 +8,7 @@ from identity_lab_auth import (
     classify_claims_token_type,
     load_auth_claims,
     load_auth_settings,
+    load_strict_claims_from_authorization,
     require_audience,
     require_delegated_token,
     require_scope,
@@ -41,10 +42,18 @@ def get_auth_context(
             correlation_id=correlation_id,
         )
 
-    try:
+    if auth_settings.mode == AuthMode.STRICT:
+        try:
+            claims = load_strict_claims_from_authorization(
+                authorization,
+                jwks_url=settings.auth_jwks_url,
+                allowed_audiences=settings.allowed_audiences,
+                issuer=settings.auth_issuer,
+            )
+        except ValueError:
+            _raise_auth_error(status.HTTP_401_UNAUTHORIZED, "invalid_token")
+    else:
         claims = load_auth_claims(auth_settings)
-    except NotImplementedError:
-        _raise_auth_error(status.HTTP_501_NOT_IMPLEMENTED, "strict_auth_not_implemented")
 
     if not claims:
         _raise_auth_error(status.HTTP_401_UNAUTHORIZED, "missing_claims")
