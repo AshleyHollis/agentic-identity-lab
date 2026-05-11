@@ -21,20 +21,29 @@ def _build_traceparent() -> str:
     return f"00-{secrets.token_hex(16)}-{secrets.token_hex(8)}-01"
 
 
+def _scope_candidates(scope: str) -> list[str]:
+    candidates = [scope]
+    if not scope.endswith("/.default") and "/" in scope:
+        audience = scope.rsplit("/", 1)[0]
+        candidates.append(f"{audience}/.default")
+    return list(dict.fromkeys(candidate for candidate in candidates if candidate))
+
+
 def _get_access_token(scope: str) -> str:
-    completed = subprocess.run(
-        ["az", "account", "get-access-token", "--scope", scope, "-o", "json"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError("Unable to acquire access token for smoke scope.")
-    payload = json.loads(completed.stdout or "{}")
-    token = str(payload.get("accessToken", "")).strip()
-    if not token:
-        raise RuntimeError("Access token response missing token value.")
-    return token
+    for candidate in _scope_candidates(scope):
+        completed = subprocess.run(
+            ["az", "account", "get-access-token", "--scope", candidate, "-o", "json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            continue
+        payload = json.loads(completed.stdout or "{}")
+        token = str(payload.get("accessToken", "")).strip()
+        if token:
+            return token
+    raise RuntimeError("Unable to acquire access token for smoke scope.")
 
 
 def main() -> int:
